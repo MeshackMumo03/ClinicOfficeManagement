@@ -1,2 +1,10 @@
+<<<<<<< HEAD
 # ClinicOfficeManagement
 ClinicOffice is a webapp-based Doctor Office Management System for small clinics. It streamlines patient registration, appointments, consultations, prescriptions, billing, and reports with secure, role-based access using Firebase and React.
+=======
+# Firebase Studio
+
+This is a NextJS starter in Firebase Studio.
+
+To get started, take a look at src/app/page.tsx.
+>>>>>>> dd6cf03 (Initialized workspace with Firebase Studio)

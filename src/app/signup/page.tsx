@@ -17,6 +17,7 @@ import { Stethoscope } from "lucide-react";
 import { useAuth, useUser } from "@/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
+import { Loader } from "@/components/layout/loader";
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -61,7 +62,7 @@ export default function SignupPage() {
 
 
   if (isUserLoading || user) {
-    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+    return <Loader />;
   }
 
   return (

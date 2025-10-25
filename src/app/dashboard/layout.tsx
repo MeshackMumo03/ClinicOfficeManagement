@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import { Header } from "@/components/layout/header";
+import { Loader } from '@/components/layout/loader';
 
 export default function DashboardLayout({
   children,
@@ -20,7 +21,7 @@ export default function DashboardLayout({
   }, [user, isUserLoading, router]);
 
   if (isUserLoading || !user) {
-    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+    return <Loader />;
   }
 
   return (

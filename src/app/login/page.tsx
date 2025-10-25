@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Loader } from "@/components/layout/loader";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function LoginPage() {
   };
 
   if (isUserLoading || user) {
-    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+    return <Loader />;
   }
 
   return (

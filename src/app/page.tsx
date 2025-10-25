@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from 'react';
-import { redirect, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
+import { Loader } from '@/components/layout/loader';
 
 export default function RootPage() {
   const { user, isUserLoading } = useUser();
@@ -18,5 +19,5 @@ export default function RootPage() {
     }
   }, [user, isUserLoading, router]);
 
-  return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+  return <Loader />;
 }

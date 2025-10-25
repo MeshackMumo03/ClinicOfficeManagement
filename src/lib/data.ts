@@ -19,6 +19,11 @@ export const patients: Patient[] = [
   { id: 'PID006', name: 'Sarah Brown', email: 'sarah.b@example.com', age: 38, gender: 'Female', lastVisit: '2023-11-02', status: 'Active' },
   { id: 'PID007', name: 'David Wilson', email: 'david.w@example.com', age: 62, gender: 'Male', lastVisit: '2023-07-11', status: 'Active' },
   { id: 'PID008', name: 'Laura Taylor', email: 'laura.t@example.com', age: 25, gender: 'Female', lastVisit: '2023-10-30', status: 'Active' },
+  { id: 'PID009', name: 'Clara Bennett', email: 'clara.b@example.com', age: 31, gender: 'Female', lastVisit: '2024-07-10', status: 'Active' },
+  { id: 'PID010', name: 'Owen Foster', email: 'owen.f@example.com', age: 49, gender: 'Male', lastVisit: '2024-07-01', status: 'Active' },
+  { id: 'PID011', name: 'Emma Harper', email: 'emma.h@example.com', age: 28, gender: 'Female', lastVisit: '2024-06-20', status: 'Active' },
+  { id: 'PID012', name: 'Lucas Hayes', email: 'lucas.h@example.com', age: 53, gender: 'Male', lastVisit: '2024-06-15', status: 'Active' },
+  { id: 'PID013', name: 'Ava Reynolds', email: 'ava.r@example.com', age: 37, gender: 'Female', lastVisit: '2024-07-05', status: 'Active' },
 ];
 
 export type Appointment = {
@@ -28,15 +33,15 @@ export type Appointment = {
   date: string;
   time: string;
   type: 'Consultation' | 'Follow-up' | 'Check-up';
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
+  status: 'Scheduled' | 'Completed' | 'Canceled';
 };
 
 export const appointments: Appointment[] = [
-    { id: 'APT001', patientName: 'Emily Davis', doctorName: 'Dr. Smith', date: '2024-07-29', time: '10:00 AM', type: 'Consultation', status: 'Scheduled' },
-    { id: 'APT002', patientName: 'John Doe', doctorName: 'Dr. Smith', date: '2024-07-29', time: '11:30 AM', type: 'Follow-up', status: 'Scheduled' },
-    { id: 'APT003', patientName: 'Sarah Brown', doctorName: 'Dr. Jones', date: '2024-07-29', time: '02:00 PM', type: 'Check-up', status: 'Completed' },
-    { id: 'APT004', patientName: 'Jane Smith', doctorName: 'Dr. Smith', date: '2024-07-30', time: '09:00 AM', type: 'Consultation', status: 'Scheduled' },
-    { id: 'APT005', patientName: 'David Wilson', doctorName: 'Dr. Patel', date: '2024-07-30', time: '01:00 PM', type: 'Consultation', status: 'Cancelled' },
+    { id: 'APT001', patientName: 'Clara Bennett', doctorName: 'Dr. Olivia Carter', date: '2024-07-15', time: '10:00 AM', type: 'Consultation', status: 'Scheduled' },
+    { id: 'APT002', patientName: 'Owen Foster', doctorName: 'Dr. Nathan Evans', date: '2024-07-15', time: '11:30 AM', type: 'Follow-up', status: 'Completed' },
+    { id: 'APT003', patientName: 'Emma Harper', doctorName: 'Dr. Olivia Carter', date: '2024-07-16', time: '9:00 AM', type: 'Check-up', status: 'Scheduled' },
+    { id: 'APT004', patientName: 'Lucas Hayes', doctorName: 'Dr. Nathan Evans', date: '2024-07-16', time: '2:00 PM', type: 'Consultation', status: 'Canceled' },
+    { id: 'APT005', patientName: 'Ava Reynolds', doctorName: 'Dr. Olivia Carter', date: '2024-07-17', time: '1:00 PM', type: 'Consultation', status: 'Scheduled' },
 ];
 
 export type Invoice = {
@@ -70,8 +75,8 @@ export type User = {
 }
 
 export const users: User[] = [
-  { name: 'Dr. Olivia Bennett', email: 'olivia.bennett@clinic.com', role: 'Doctor', status: 'Active' },
-  { name: 'Dr. Lucas Carter', email: 'lucas.carter@clinic.com', role: 'Doctor', status: 'Active' },
+  { name: 'Dr. Olivia Carter', email: 'olivia.carter@clinic.com', role: 'Doctor', status: 'Active' },
+  { name: 'Dr. Nathan Evans', email: 'nathan.evans@clinic.com', role: 'Doctor', status: 'Active' },
   { name: 'Sophia Turner', email: 'sophia.turner@clinic.com', role: 'Nurse', status: 'Active' },
   { name: 'Ryan Mitchell', email: 'ryan.mitchell@clinic.com', role: 'Receptionist', status: 'Active' },
   { name: 'Chloe Davis', email: 'chloe.davis@clinic.com', role: 'Admin', status: 'Active' },

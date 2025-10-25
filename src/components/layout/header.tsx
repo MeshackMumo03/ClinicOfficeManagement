@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Stethoscope, Menu, Search, Bell } from "lucide-react";
+import { Stethoscope, Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,12 +20,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import React from "react";
-import { Input } from "../ui/input";
 
 const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard/appointments", label: "Appointments" },
     { href: "/dashboard/patients", label: "Patients" },
+    { href: "/dashboard/consultations", label: "Consultations" },
     { href: "/dashboard/billing", label: "Billing" },
     { href: "/dashboard/reports", label: "Reports" },
     { href: "/dashboard/chat", label: "Messages" },

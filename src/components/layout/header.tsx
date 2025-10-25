@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Stethoscope, Menu } from "lucide-react";
+import { Stethoscope, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,13 +20,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import React from "react";
+import { Input } from "../ui/input";
 
 const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard/patients", label: "Patients" },
     { href: "/dashboard/appointments", label: "Appointments" },
-    { href: "/dashboard/documents", label: "Documents" },
-    { href: "/dashboard/payments", label: "Payments" },
-    { href: "/dashboard/messages", label: "Messages" },
+    { href: "/dashboard/billing", label: "Billing" },
+    { href: "/dashboard/reports", label: "Reports" },
 ];
 
 export function Header() {
@@ -48,7 +49,7 @@ export function Header() {
             href={link.href}
             className={cn(
               "text-muted-foreground transition-colors hover:text-foreground font-medium",
-              pathname === link.href ? "text-foreground" : "text-muted-foreground"
+              (pathname.startsWith(link.href) && link.href !== "/dashboard") || pathname === link.href ? "text-foreground" : "text-muted-foreground"
             )}
           >
             {link.label}
@@ -56,6 +57,34 @@ export function Header() {
         ))}
       </nav>
        <div className="ml-auto flex items-center gap-4">
+            <div className="relative hidden md:block">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search..."
+                className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-muted/20"
+              />
+            </div>
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage data-ai-hint="person face" src="https://picsum.photos/seed/sophiaclark/100/100" alt="Sophia Clark" />
+                    <AvatarFallback>SC</AvatarFallback>
+                </Avatar>
+                <span className="sr-only">Toggle user menu</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuItem>Support</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Logout</DropdownMenuItem>
+            </DropdownMenuContent>
+            </DropdownMenu>
             <div className="md:hidden">
                 <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                     <SheetTrigger asChild>
@@ -80,7 +109,7 @@ export function Header() {
                                     href={link.href}
                                     className={cn(
                                     "flex items-center gap-4 rounded-md px-4 py-2 text-lg font-medium transition-colors hover:bg-muted",
-                                    pathname === link.href
+                                    pathname.startsWith(link.href)
                                         ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                         : "text-muted-foreground"
                                     )}
@@ -96,26 +125,6 @@ export function Header() {
                     </SheetContent>
                 </Sheet>
             </div>
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                <Avatar className="h-9 w-9">
-                    <AvatarImage data-ai-hint="person face" src="https://picsum.photos/seed/sophiaclark/100/100" alt="Sophia Clark" />
-                    <AvatarFallback>SC</AvatarFallback>
-                </Avatar>
-                <span className="sr-only">Toggle user menu</span>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Support</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-            </DropdownMenu>
        </div>
     </header>
   );

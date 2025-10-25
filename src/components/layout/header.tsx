@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Stethoscope, Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,12 @@ const navLinks = [
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const handleLogout = () => {
+    router.push('/login');
+  };
 
   return (
     <header className="sticky top-0 z-40 flex h-20 items-center gap-4 border-b bg-background px-6">
@@ -79,7 +84,7 @@ export function Header() {
                 <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuItem>Support</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
             </DropdownMenu>
             <div className="md:hidden">

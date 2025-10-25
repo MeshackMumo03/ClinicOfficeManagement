@@ -62,13 +62,11 @@ export default function LoginPage() {
         <Button type="submit" className="w-full">
           Login
         </Button>
-        <div className="text-center">
-            <Link
-            href="#"
-            className="inline-block text-sm text-primary hover:underline"
-            >
-            Forgot Password?
-            </Link>
+        <div className="text-center text-sm">
+          Don't have an account?{' '}
+          <Link href="/signup" className="text-primary hover:underline">
+            Sign up
+          </Link>
         </div>
       </div>
     </div>

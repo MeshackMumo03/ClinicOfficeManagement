@@ -1,10 +1,4 @@
-import React from 'react';
-import { MainSidebar } from '@/components/layout/main-sidebar';
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarInset,
-} from '@/components/ui/sidebar';
+import { Header } from "@/components/layout/header";
 
 export default function DashboardLayout({
   children,
@@ -12,13 +6,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <MainSidebar />
-      </Sidebar>
-      <SidebarInset>
-        <main className="flex-1 p-6 md:p-8 lg:p-10">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      <Header />
+      <main className="flex-1 p-4 md:p-6 lg:p-10">{children}</main>
+    </div>
   );
 }

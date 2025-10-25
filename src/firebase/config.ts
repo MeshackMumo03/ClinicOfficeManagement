@@ -1,8 +1,9 @@
 export const firebaseConfig = {
-  "projectId": "studio-6972381914-5ae46",
-  "appId": "1:786306753771:web:e2b90ed346fa7adf5ccaae",
-  "apiKey": "AIzaSyDv3oQjGbpsDbCXTCHt4uPkTQe8iSzh_GE",
-  "authDomain": "studio-6972381914-5ae46.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "786306753771"
+  apiKey: "AIzaSyAsP9C8w4byiY85N5hmea9t_oUXH_Sk5-U",
+  authDomain: "clinicoffice-e0e88.firebaseapp.com",
+  databaseURL: "https://clinicoffice-e0e88-default-rtdb.firebaseio.com",
+  projectId: "clinicoffice-e0e88",
+  storageBucket: "clinicoffice-e0e88.appspot.com",
+  messagingSenderId: "283135977821",
+  appId: "1:283135977821:web:1eb0bd7f006e3ad3f760b4"
 };

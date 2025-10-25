@@ -1,11 +1,51 @@
-import Link from "next/link";
-import Image from "next/image";
+"use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useUser, useAuth } from "@/firebase";
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push("/dashboard");
+    }
+  }, [user, isUserLoading, router]);
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const email = e.currentTarget.email.value;
+    const password = e.currentTarget.password.value;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message,
+      });
+    }
+  };
+
+  if (isUserLoading || user) {
+    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+  }
+
   return (
     <div className="w-full h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
@@ -15,7 +55,7 @@ export default function LoginPage() {
             Welcome back! Please log in to your account.
           </p>
         </div>
-        <div className="grid gap-6">
+        <form onSubmit={handleLogin} className="grid gap-6">
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -38,7 +78,7 @@ export default function LoginPage() {
               Sign up
             </Link>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

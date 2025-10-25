@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Stethoscope, Menu, Search } from "lucide-react";
+import { Stethoscope, Menu, Search, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,10 +24,11 @@ import { Input } from "../ui/input";
 
 const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard/patients", label: "Patients" },
     { href: "/dashboard/appointments", label: "Appointments" },
+    { href: "/dashboard/patients", label: "Patients" },
     { href: "/dashboard/billing", label: "Billing" },
     { href: "/dashboard/reports", label: "Reports" },
+    { href: "/dashboard/chat", label: "Messages" },
 ];
 
 export function Header() {
@@ -57,20 +58,16 @@ export function Header() {
         ))}
       </nav>
        <div className="ml-auto flex items-center gap-4">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search..."
-                className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] bg-muted/20"
-              />
-            </div>
+            <Button variant="ghost" size="icon" className="rounded-full">
+                <Bell className="h-5 w-5" />
+                <span className="sr-only">Toggle notifications</span>
+            </Button>
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar className="h-9 w-9">
-                    <AvatarImage data-ai-hint="person face" src="https://picsum.photos/seed/sophiaclark/100/100" alt="Sophia Clark" />
-                    <AvatarFallback>SC</AvatarFallback>
+                    <AvatarImage data-ai-hint="person face" src="https://picsum.photos/seed/amelia/100/100" alt="Amelia" />
+                    <AvatarFallback>A</AvatarFallback>
                 </Avatar>
                 <span className="sr-only">Toggle user menu</span>
                 </Button>

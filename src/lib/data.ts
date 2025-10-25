@@ -61,3 +61,18 @@ export const consultationTypes = [
   { value: "telehealth", label: "Telehealth", icon: Video },
   { value: "follow-up", label: "Follow-up", icon: FileText },
 ];
+
+export type User = {
+  name: string;
+  email: string;
+  role: 'Doctor' | 'Nurse' | 'Receptionist' | 'Admin';
+  status: 'Active' | 'Inactive';
+}
+
+export const users: User[] = [
+  { name: 'Dr. Olivia Bennett', email: 'olivia.bennett@clinic.com', role: 'Doctor', status: 'Active' },
+  { name: 'Dr. Lucas Carter', email: 'lucas.carter@clinic.com', role: 'Doctor', status: 'Active' },
+  { name: 'Sophia Turner', email: 'sophia.turner@clinic.com', role: 'Nurse', status: 'Active' },
+  { name: 'Ryan Mitchell', email: 'ryan.mitchell@clinic.com', role: 'Receptionist', status: 'Active' },
+  { name: 'Chloe Davis', email: 'chloe.davis@clinic.com', role: 'Admin', status: 'Active' },
+];

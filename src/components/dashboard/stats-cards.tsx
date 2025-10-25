@@ -1,47 +1,36 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, DollarSign, MessageSquare } from "lucide-react";
 
 const stats = [
     {
         title: "Total Patients",
-        value: "1,254",
-        change: "+20.1% from last month",
-        icon: Users,
+        value: "1,250",
+        change: "+10%",
     },
     {
-        title: "Upcoming Appointments",
-        value: "42",
-        change: "+15 since yesterday",
-        icon: Calendar,
+        title: "Appointments this Month",
+        value: "320",
+        change: "+5%",
     },
     {
-        title: "Revenue Today",
-        value: "$4,820.50",
-        change: "+5.2% from last week",
-        icon: DollarSign,
-    },
-    {
-        title: "Unread Messages",
-        value: "3",
-        change: "1 new message",
-        icon: MessageSquare,
+        title: "Revenue Summary",
+        value: "$45,000",
+        change: "+8%",
     },
 ];
 
 export function StatsCards() {
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {stats.map((stat) => (
-                <Card key={stat.title}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm !font-body !font-medium">
+                <Card key={stat.title} className="bg-muted/20 border-0">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base font-medium text-muted-foreground">
                             {stat.title}
                         </CardTitle>
-                        <stat.icon className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stat.value}</div>
-                        <p className="text-xs text-muted-foreground">{stat.change}</p>
+                        <div className="text-3xl font-bold">{stat.value}</div>
+                        <p className="text-sm text-green-500">{stat.change}</p>
                     </CardContent>
                 </Card>
             ))}

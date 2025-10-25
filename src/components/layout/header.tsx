@@ -23,11 +23,10 @@ import React from "react";
 
 const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard/appointments", label: "Appointments" },
     { href: "/dashboard/patients", label: "Patients" },
+    { href: "/dashboard/appointments", label: "Appointments" },
     { href: "/dashboard/billing", label: "Billing" },
-    { href: "/dashboard/consultations", label: "Consultations" },
-    { href: "/dashboard/chat", label: "Messages" },
+    { href: "/dashboard/reports", label: "Reports" },
 ];
 
 export function Header() {

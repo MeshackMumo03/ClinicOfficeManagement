@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -25,6 +28,8 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   
 
 export default function SignupPage() {
+  const [role, setRole] = useState("");
+
   return (
     <div className="w-full min-h-screen flex flex-col">
        <header className="flex h-20 items-center gap-4 border-b bg-background px-6">
@@ -64,18 +69,33 @@ export default function SignupPage() {
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="role">Role</Label>
-                    <Select>
+                    <Select onValueChange={setRole}>
                         <SelectTrigger id="role">
                             <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="doctor">Doctor</SelectItem>
-                            <SelectItem value="nurse">Nurse</SelectItem>
+                            <SelectItem value="patient">Patient</SelectItem>
                             <SelectItem value="receptionist">Receptionist</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
+
+                {role === 'doctor' && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="registration-number">Registration Number</Label>
+                    <Input id="registration-number" placeholder="Enter your registration number" required />
+                  </div>
+                )}
+
+                {role === 'receptionist' && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="work-id">Work ID</Label>
+                    <Input id="work-id" placeholder="Enter your work ID" required />
+                  </div>
+                )}
+
                 <Button type="submit" className="w-full">
                 Sign Up
                 </Button>

@@ -79,7 +79,7 @@ export function MainSidebar() {
                 <AvatarFallback>DS</AvatarFallback>
             </Avatar>
             <div className="flex flex-col text-sm">
-                <span className="font-semibold text-sidebar-foreground">Dr. Smith</span>
+                <span className="font-semibold text-sidebar-foreground">Dr. Olivia Bennett</span>
                 <span className="text-muted-foreground text-xs">Cardiologist</span>
             </div>
         </div>

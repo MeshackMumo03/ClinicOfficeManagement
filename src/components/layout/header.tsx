@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Stethoscope, Menu, X } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ const navLinks = [
     { href: "/dashboard/patients", label: "Patients" },
     { href: "/dashboard/appointments", label: "Appointments" },
     { href: "/dashboard/billing", label: "Billing" },
+    { href: "/dashboard/chat", label: "Messages" },
     { href: "/dashboard/reports", label: "Reports" },
 ];
 
@@ -35,54 +36,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-20 items-center gap-4 border-b bg-background px-6">
-      <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-        <div className="bg-primary text-primary-foreground rounded-md p-2">
-            <Stethoscope className="h-6 w-6" />
-        </div>
-        <span className="text-xl font-headline">ClinicOffice</span>
-      </Link>
-      <nav className="hidden flex-1 items-center justify-center lg:flex">
-        <ul className="flex items-center gap-6 text-sm font-medium">
-          {navLinks.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className={cn(
-                  "text-muted-foreground transition-colors hover:text-foreground",
-                  pathname === link.href && "text-foreground"
-                )}
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <div className="flex items-center gap-4 ml-auto">
-        <Button variant="ghost" size="icon" className="rounded-full">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Toggle notifications</span>
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src="https://picsum.photos/seed/Amelia/100/100" alt="Amelia" />
-                <AvatarFallback>A</AvatarFallback>
-              </Avatar>
-              <span className="sr-only">Toggle user menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Support</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Logout</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="lg:hidden">
+       <div className="lg:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon">
@@ -93,10 +47,11 @@ export function Header() {
                 <SheetContent side="left">
                 <div className="flex h-full flex-col py-6">
                     <Link href="/dashboard" className="flex items-center gap-2 font-semibold px-6">
-                        <div className="bg-primary text-primary-foreground rounded-md p-2">
-                            <Stethoscope className="h-6 w-6" />
-                        </div>
-                        <span className="text-xl font-headline">ClinicOffice</span>
+                        <Avatar className="h-10 w-10">
+                            <AvatarImage data-ai-hint="professional person" src="https://picsum.photos/seed/evelyn/100/100" alt="Dr. Evelyn Reed" />
+                            <AvatarFallback>ER</AvatarFallback>
+                        </Avatar>
+                        <span className="text-lg font-semibold">Dr. Evelyn Reed</span>
                     </Link>
                     <nav className="flex-1 mt-8">
                         <ul className="grid gap-2 px-6">
@@ -122,6 +77,30 @@ export function Header() {
                 </SheetContent>
             </Sheet>
         </div>
+      <div className="flex items-center gap-4 ml-auto">
+        <Button variant="ghost" size="icon" className="rounded-full">
+            <Bell className="h-5 w-5" />
+            <span className="sr-only">Toggle notifications</span>
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Avatar className="h-9 w-9">
+                <AvatarImage data-ai-hint="professional person" src="https://picsum.photos/seed/evelyn/100/100" alt="Dr. Evelyn Reed" />
+                <AvatarFallback>ER</AvatarFallback>
+              </Avatar>
+              <span className="sr-only">Toggle user menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem>Support</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Logout</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

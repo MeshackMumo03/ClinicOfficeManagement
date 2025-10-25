@@ -7,10 +7,8 @@ import {
   Calendar,
   Users,
   Stethoscope,
-  CreditCard,
-  MessageSquare,
-  Settings,
-  LifeBuoy,
+  FileText,
+  LineChart,
 } from "lucide-react";
 
 import {
@@ -20,17 +18,15 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/dashboard/appointments", label: "Appointments", icon: Calendar },
-  { href: "/dashboard/patients", label: "Patients", icon: Users },
   { href: "/dashboard/consultations", label: "Consultations", icon: Stethoscope },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-  { href: "/dashboard/chat", label: "Messages", icon: MessageSquare, badge: "3" },
+  { href: "/dashboard/prescriptions", label: "Prescriptions", icon: FileText },
+  { href: "/dashboard/reports", label: "Reports", icon: LineChart },
 ];
 
 export function MainSidebar() {
@@ -39,31 +35,29 @@ export function MainSidebar() {
   return (
     <>
       <SidebarHeader>
-        <div className="flex items-center gap-2 p-2">
-            <div className="bg-primary text-primary-foreground rounded-md p-2">
-                <Stethoscope className="h-6 w-6" />
+        <div className="flex items-center gap-3 p-4">
+            <Avatar className="h-10 w-10">
+                <AvatarImage data-ai-hint="professional person" src="https://picsum.photos/seed/evelyn/100/100" alt="Dr. Evelyn Reed" />
+                <AvatarFallback>ER</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col text-sm">
+                <span className="font-semibold text-foreground">Dr. Evelyn Reed</span>
             </div>
-            <span className="text-lg font-semibold text-primary-foreground font-headline">ClinicOffice</span>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="p-4">
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href}
-                tooltip={{ children: item.label }}
+                className="gap-3 justify-start"
               >
                 <Link href={item.href}>
-                  <item.icon />
+                  <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
-                  {item.badge && (
-                    <span className="ml-auto bg-accent text-accent-foreground text-xs rounded-full px-2 py-0.5">
-                        {item.badge}
-                    </span>
-                  )}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -72,17 +66,6 @@ export function MainSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <SidebarSeparator />
-        <div className="flex items-center gap-3 p-2">
-            <Avatar className="h-10 w-10">
-                <AvatarImage src="https://picsum.photos/seed/doc1/100/100" alt="Dr. Smith" />
-                <AvatarFallback>DS</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col text-sm">
-                <span className="font-semibold text-sidebar-foreground">Dr. Olivia Bennett</span>
-                <span className="text-muted-foreground text-xs">Cardiologist</span>
-            </div>
-        </div>
       </SidebarFooter>
     </>
   );

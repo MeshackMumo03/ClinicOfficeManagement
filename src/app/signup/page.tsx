@@ -147,7 +147,7 @@ export default function SignupPage() {
         uid: newUser.uid,
         name: newUser.displayName,
         email: newUser.email,
-        role: role, // Default role for Google sign-up
+        role: role,
       };
 
       setDocumentNonBlocking(userDocRef, userData, { merge: true });

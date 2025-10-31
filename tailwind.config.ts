@@ -65,6 +65,12 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        role: {
+          admin: 'hsl(var(--role-admin))',
+          doctor: 'hsl(var(--role-doctor))',
+          receptionist: 'hsl(var(--role-receptionist))',
+          patient: 'hsl(var(--role-patient))',
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -88,10 +94,19 @@ export default {
             height: '0',
           },
         },
+        'role-bar-in': {
+          from: {
+            width: '0%',
+          },
+          to: {
+            width: '100%',
+          },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'role-bar-in': 'role-bar-in 0.8s ease-out forwards',
       },
     },
   },

@@ -37,6 +37,11 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 10% 3.9%;
     --sidebar-ring: 221 83% 53%;
+
+    --role-admin: 265 80% 50%;
+    --role-doctor: 221 83% 53%;
+    --role-receptionist: 145 63% 42%;
+    --role-patient: 175 60% 45%;
   }
 
   .dark {
@@ -72,6 +77,11 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 14.9%;
     --sidebar-ring: 221 83% 53%;
+
+    --role-admin: 265 80% 60%;
+    --role-doctor: 221 83% 63%;
+    --role-receptionist: 145 63% 52%;
+    --role-patient: 175 60% 55%;
   }
 }
 

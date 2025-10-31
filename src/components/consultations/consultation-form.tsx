@@ -1,5 +1,6 @@
 "use client";
 
+// Import necessary hooks and components from react-hook-form, zod, ShadCN, and local data.
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,6 +25,7 @@ import {
   } from "@/components/ui/select";
 import { patients } from "@/lib/data";
 
+// Define the schema for the consultation form using Zod.
 const formSchema = z.object({
   patientName: z.string().min(1, "Patient name is required."),
   dateOfBirth: z.string().min(1, "Date of birth is required."),
@@ -36,9 +38,15 @@ const formSchema = z.object({
   instructions: z.string().optional(),
 });
 
+// Infer the type of the form data from the schema.
 type FormData = z.infer<typeof formSchema>;
 
+/**
+ * ConsultationForm component to capture patient consultation details.
+ * It uses react-hook-form for form management and zod for validation.
+ */
 export function ConsultationForm() {
+  // Initialize the form with react-hook-form.
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -54,9 +62,10 @@ export function ConsultationForm() {
     },
   });
 
+  // Handle form submission.
   const onSubmit = async (data: FormData) => {
     console.log(data);
-    // Handle form submission
+    // TODO: Handle form submission logic, e.g., save to a database.
   };
 
   return (
@@ -69,6 +78,7 @@ export function ConsultationForm() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             
+            {/* Patient Information section */}
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Patient Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -127,6 +137,7 @@ export function ConsultationForm() {
                 </div>
             </div>
 
+            {/* Doctor's Notes section */}
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Doctor's Notes</h3>
                 <FormField
@@ -148,6 +159,7 @@ export function ConsultationForm() {
                 />
             </div>
 
+            {/* Diagnosis section */}
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Diagnosis</h3>
                 <FormField
@@ -168,6 +180,7 @@ export function ConsultationForm() {
                 />
             </div>
 
+            {/* Prescription section */}
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Prescription</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -223,6 +236,7 @@ export function ConsultationForm() {
                 />
             </div>
 
+            {/* Form actions */}
             <div className="flex justify-end gap-4">
               <Button type="submit">Save Consultation</Button>
               <Button variant="outline" type="button">Print/Export PDF</Button>

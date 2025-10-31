@@ -1,5 +1,6 @@
 "use client";
 
+// Import necessary hooks, components, and Firebase functions.
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Stethoscope, Menu, Bell } from "lucide-react";
@@ -25,7 +26,7 @@ import { doc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useAuth } from "@/firebase";
 
-
+// Navigation links for the header.
 const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard/appointments", label: "Appointments" },
@@ -36,10 +37,19 @@ const navLinks = [
     { href: "/dashboard/chat", label: "Messages" },
 ];
 
+/**
+ * A utility function to get initials from a name.
+ * @param name The full name.
+ * @returns The initials of the name.
+ */
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
 }
 
+/**
+ * Header component for the dashboard layout.
+ * It includes navigation links, user menu, and a mobile menu.
+ */
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
@@ -48,16 +58,20 @@ export function Header() {
   const firestore = useFirestore();
   const auth = useAuth();
 
+  // Memoized reference to the user's document in Firestore.
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
   );
+  // Fetch user data from Firestore.
   const { data: userData } = useDoc(userDocRef);
 
+  // Determine display name and avatar fallback.
   const displayName = userData?.name || user?.email || "User";
   const avatarFallback = displayName ? getInitials(displayName) : "U";
 
 
+  // Handle user logout.
   const handleLogout = async () => {
     try {
         await signOut(auth);
@@ -69,12 +83,14 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 flex h-20 items-center gap-4 border-b bg-background px-6">
+      {/* Logo and site title. */}
       <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
         <div className="bg-primary text-primary-foreground rounded-md p-2">
           <Stethoscope className="h-6 w-6" />
         </div>
         <span className="text-xl font-headline">ClinicOffice</span>
       </Link>
+      {/* Desktop navigation links. */}
       <nav className="hidden md:flex items-center gap-6 ml-10">
         {navLinks.map((link) => (
           <Link
@@ -89,6 +105,7 @@ export function Header() {
           </Link>
         ))}
       </nav>
+       {/* Right section of the header with notifications and user menu. */}
        <div className="ml-auto flex items-center gap-4">
             <Button variant="ghost" size="icon" className="rounded-full">
                 <Bell className="h-5 w-5" />
@@ -114,6 +131,7 @@ export function Header() {
                 <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
             </DropdownMenu>
+            {/* Mobile menu. */}
             <div className="md:hidden">
                 <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                     <SheetTrigger asChild>

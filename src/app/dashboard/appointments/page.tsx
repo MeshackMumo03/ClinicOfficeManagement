@@ -1,5 +1,6 @@
 "use client";
 
+// Import React and necessary components from ShadCN and Lucide-React.
 import React from "react";
 import {
   Table,
@@ -22,12 +23,19 @@ import {
 import { appointments, users } from "@/lib/data";
 import { PlusCircle, ListFilter } from "lucide-react";
 
+/**
+ * AppointmentsPage component to display and manage appointments.
+ * It includes a table of appointments and filters for doctors, date, and status.
+ */
 export default function AppointmentsPage() {
+    // Filter users to get only doctors for the filter dropdown.
     const doctors = users.filter(u => u.role === 'Doctor');
+    // Get unique statuses from appointments for the filter dropdown.
     const statuses = Array.from(new Set(appointments.map(a => a.status)));
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Header section with page title and a button to add a new appointment. */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-headline text-3xl md:text-4xl">Appointments</h1>
@@ -38,6 +46,7 @@ export default function AppointmentsPage() {
         </Button>
       </div>
 
+      {/* Filter section with dropdown menus for doctor, date, and status. */}
       <div className="flex items-center gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -49,6 +58,7 @@ export default function AppointmentsPage() {
           <DropdownMenuContent align="start">
             <DropdownMenuLabel>Filter by Doctor</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {/* Map through doctors to create checkbox items for the filter. */}
             {doctors.map((doctor) => (
                 <DropdownMenuCheckboxItem key={doctor.email}>
                     {doctor.name}
@@ -81,6 +91,7 @@ export default function AppointmentsPage() {
           <DropdownMenuContent align="start">
             <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {/* Map through statuses to create checkbox items for the filter. */}
             {statuses.map((status) => (
                 <DropdownMenuCheckboxItem key={status}>
                     {status}
@@ -90,6 +101,7 @@ export default function AppointmentsPage() {
         </DropdownMenu>
       </div>
 
+      {/* Table section to display appointments. */}
       <div className="border rounded-lg w-full">
         <div className="relative w-full overflow-auto">
           <Table>
@@ -102,6 +114,7 @@ export default function AppointmentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {/* Map through appointments to create a table row for each appointment. */}
               {appointments.map((appointment) => (
                 <TableRow key={appointment.id}>
                   <TableCell className="font-medium">
@@ -110,6 +123,7 @@ export default function AppointmentsPage() {
                   <TableCell className="text-primary hover:underline cursor-pointer">{appointment.doctorName}</TableCell>
                   <TableCell className="text-primary hover:underline cursor-pointer">{new Date(appointment.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}, {appointment.time}</TableCell>
                   <TableCell>
+                    {/* Display a badge with a color corresponding to the appointment status. */}
                     <Badge
                       variant={
                         appointment.status === "Scheduled"

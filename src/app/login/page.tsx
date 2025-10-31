@@ -1,5 +1,6 @@
 "use client";
 
+// Import necessary hooks and components.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -15,18 +16,24 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "@/components/layout/loader";
 
+/**
+ * LoginPage component for user authentication.
+ * It handles both email/password and Google sign-in.
+ */
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
+  // Redirect to dashboard if user is already logged in.
   useEffect(() => {
     if (!isUserLoading && user) {
       router.push("/dashboard");
     }
   }, [user, isUserLoading, router]);
 
+  // Handle email and password login.
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const email = e.currentTarget.email.value;
@@ -43,6 +50,7 @@ export default function LoginPage() {
     }
   };
 
+  // If user is loading or already logged in, show loader.
   if (isUserLoading || user) {
     return <Loader />;
   }

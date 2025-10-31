@@ -1,3 +1,5 @@
+// This file exports the Firebase configuration object for the web app.
+// These values are used to initialize the Firebase app.
 export const firebaseConfig = {
   apiKey: "AIzaSyAsP9C8w4byiY85N5hmea9t_oUXH_Sk5-U",
   authDomain: "clinicoffice-e0e88.firebaseapp.com",

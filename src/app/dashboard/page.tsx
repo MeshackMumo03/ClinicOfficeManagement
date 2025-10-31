@@ -1,24 +1,34 @@
 "use client";
 
+// Import necessary components and hooks.
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDoc, useUser, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 
+/**
+ * DashboardPage component to display the main dashboard.
+ * It shows a welcome message, key metrics, and quick actions.
+ */
 export default function DashboardPage() {
+  // Get the current authenticated user and Firestore instance.
   const { user } = useUser();
   const firestore = useFirestore();
 
+  // Create a memoized reference to the user's document in Firestore.
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
   );
+  // Fetch the user's data from Firestore.
   const { data: userData } = useDoc(userDocRef);
 
+  // Determine the display name, defaulting to email if name is not available.
   const displayName = userData?.name || user?.email || "User";
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Header section with a welcome message. */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
@@ -28,6 +38,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Grid of cards displaying key metrics. */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -61,6 +72,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Quick actions section with buttons for common tasks. */}
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-bold">Quick Actions</h2>
         <div className="flex flex-wrap gap-4">

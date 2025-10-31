@@ -10,6 +10,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+// Defines the schema for the input of the consultation diagnosis support flow.
 const ConsultationDiagnosisSupportInputSchema = z.object({
   patientMedicalHistory: z
     .string()
@@ -24,6 +25,7 @@ export type ConsultationDiagnosisSupportInput = z.infer<
   typeof ConsultationDiagnosisSupportInputSchema
 >;
 
+// Defines the schema for the output of the consultation diagnosis support flow.
 const ConsultationDiagnosisSupportOutputSchema = z.object({
   diagnosisConsiderations: z
     .string()
@@ -35,12 +37,18 @@ export type ConsultationDiagnosisSupportOutput = z.infer<
   typeof ConsultationDiagnosisSupportOutputSchema
 >;
 
+/**
+ * An asynchronous function that takes consultation details as input and returns AI-generated diagnosis considerations.
+ * @param input The consultation details.
+ * @returns A promise that resolves to the diagnosis considerations.
+ */
 export async function consultationDiagnosisSupport(
   input: ConsultationDiagnosisSupportInput
 ): Promise<ConsultationDiagnosisSupportOutput> {
   return consultationDiagnosisSupportFlow(input);
 }
 
+// Defines a Genkit prompt for the consultation diagnosis support feature.
 const prompt = ai.definePrompt({
   name: 'consultationDiagnosisSupportPrompt',
   input: {schema: ConsultationDiagnosisSupportInputSchema},
@@ -55,6 +63,7 @@ Lab Results: {{{labResults}}}
 Diagnosis Considerations:`,
 });
 
+// Defines a Genkit flow that uses the prompt to provide diagnosis support.
 const consultationDiagnosisSupportFlow = ai.defineFlow(
   {
     name: 'consultationDiagnosisSupportFlow',
@@ -62,7 +71,9 @@ const consultationDiagnosisSupportFlow = ai.defineFlow(
     outputSchema: ConsultationDiagnosisSupportOutputSchema,
   },
   async input => {
+    // Executes the prompt with the given input.
     const {output} = await prompt(input);
+    // Returns the output from the prompt.
     return output!;
   }
 );

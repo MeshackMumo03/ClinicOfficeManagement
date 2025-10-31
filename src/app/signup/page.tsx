@@ -1,6 +1,7 @@
 
 "use client";
 
+// Import necessary hooks, components, and Firebase functions.
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -26,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader } from "@/components/layout/loader";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
+// GoogleIcon component to display the Google logo.
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     role="img"
@@ -38,6 +40,10 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+/**
+ * SignupPage component for user registration.
+ * It handles both email/password and Google sign-up, with role-specific fields.
+ */
 export default function SignupPage() {
   const [role, setRole] = useState("patient");
   const router = useRouter();
@@ -46,12 +52,14 @@ export default function SignupPage() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
+  // Redirect to dashboard if user is already logged in.
   useEffect(() => {
     if (!isUserLoading && user) {
       router.push("/dashboard");
     }
   }, [user, isUserLoading, router]);
 
+  // Handle email and password sign-up.
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const name = e.currentTarget.name.value;
@@ -87,7 +95,7 @@ export default function SignupPage() {
       );
       const newUser = userCredential.user;
 
-      // Now, save user info to Firestore
+      // Save user info to Firestore.
       const userDocRef = doc(firestore, "users", newUser.uid);
       const userData: {
         uid: string,
@@ -128,6 +136,7 @@ export default function SignupPage() {
     }
   };
 
+  // Handle Google sign-in.
   const handleGoogleSignIn = async () => {
     if (!role) {
       toast({
@@ -162,6 +171,7 @@ export default function SignupPage() {
     }
   };
 
+  // If user is loading or already logged in, show loader.
   if (isUserLoading || user) {
     return <Loader />;
   }

@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "./info-card";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { EditProfileDialog } from "./edit-profile-dialog";
 
 // Define the shape of the user object
 type User = {
@@ -73,7 +75,7 @@ export function UserProfile({ user }: UserProfileProps) {
             {avatarFallback}
           </AvatarFallback>
         </Avatar>
-        <div className="text-center sm:text-left">
+        <div className="text-center sm:text-left flex-1">
           <div className="flex items-center gap-4 justify-center sm:justify-start">
             <h2 className="text-3xl font-bold font-headline">{name}</h2>
             <Badge className={cn("text-sm capitalize", roleColorClass)}>
@@ -82,6 +84,7 @@ export function UserProfile({ user }: UserProfileProps) {
           </div>
           <p className="text-muted-foreground">{email}</p>
         </div>
+        <EditProfileDialog user={user} />
       </div>
 
       {/* Profile Details */}

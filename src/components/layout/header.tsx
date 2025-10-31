@@ -71,7 +71,10 @@ export function Header() {
   // Filter navigation links based on user role
   const navLinks = allNavLinks.filter(link => link.roles.includes(userRole));
   if (userRole === "admin") {
-    navLinks.push({ href: "/admin", label: "Admin", roles: ["admin"] });
+    const hasAdminLink = navLinks.some(l => l.href === '/admin');
+    if (!hasAdminLink) {
+        navLinks.push({ href: "/admin", label: "Admin", roles: ["admin"] });
+    }
   }
 
   // Determine display name and avatar fallback.

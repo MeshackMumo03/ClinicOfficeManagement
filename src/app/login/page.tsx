@@ -1,15 +1,17 @@
+
 "use client";
 
 // Import necessary hooks and components.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useUser, useAuth } from "@/firebase";
+import { useUser, useAuth, useFirestore } from "@/firebase";
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,15 +25,23 @@ import { Loader } from "@/components/layout/loader";
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
   // Redirect to dashboard if user is already logged in.
   useEffect(() => {
     if (!isUserLoading && user) {
-      router.push("/dashboard");
+      const userDocRef = doc(firestore, "users", user.uid);
+      getDoc(userDocRef).then((docSnap) => {
+        if (docSnap.exists() && docSnap.data().role === 'admin') {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
+      });
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, firestore]);
 
   // Handle email and password login.
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -39,8 +49,18 @@ export default function LoginPage() {
     const email = e.currentTarget.email.value;
     const password = e.currentTarget.password.value;
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Check user role from Firestore
+      const userDocRef = doc(firestore, "users", user.uid);
+      const docSnap = await getDoc(userDocRef);
+
+      if (docSnap.exists() && docSnap.data().role === 'admin') {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",

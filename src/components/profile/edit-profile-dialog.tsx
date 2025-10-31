@@ -31,20 +31,26 @@ import { useToast } from "@/hooks/use-toast";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Pencil } from "lucide-react";
 
-// Define the shape of the user object
+// Define the shape of the user object, including optional role-specific fields
 type User = {
     uid: string;
     name: string;
+    role: "admin" | "doctor" | "receptionist" | "patient";
     photoURL?: string;
+    registrationNumber?: string;
+    workId?: string;
   };
 
 interface EditProfileDialogProps {
   user: User;
 }
 
+// Update the schema to include optional role-specific fields
 const formSchema = z.object({
   name: z.string().min(1, "Name is required."),
   photoURL: z.string().optional(),
+  registrationNumber: z.string().optional(),
+  workId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -59,6 +65,8 @@ export function EditProfileDialog({ user }: EditProfileDialogProps) {
     defaultValues: {
       name: user.name || "",
       photoURL: user.photoURL || "",
+      registrationNumber: user.registrationNumber || "",
+      workId: user.workId || "",
     },
   });
 
@@ -105,38 +113,73 @@ export function EditProfileDialog({ user }: EditProfileDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Your name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="photoURL"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Profile Picture</FormLabel>
-                  <FormControl>
-                    <Input type="file" onChange={handleFileChange} />
-                  </FormControl>
-                   <FormMessage />
-                   {field.value && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                        New photo preview will be visible after saving.
-                    </p>
-                   )}
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-4">
+                <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Your name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="photoURL"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Profile Picture</FormLabel>
+                    <FormControl>
+                        <Input type="file" onChange={handleFileChange} />
+                    </FormControl>
+                    <FormMessage />
+                    {field.value && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            New photo preview will be visible after saving.
+                        </p>
+                    )}
+                    </FormItem>
+                )}
+                />
+
+                {/* Conditionally render role-specific fields */}
+                {user.role === 'doctor' && (
+                    <FormField
+                    control={form.control}
+                    name="registrationNumber"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Registration Number</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Your registration number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                )}
+
+                {user.role === 'receptionist' && (
+                    <FormField
+                    control={form.control}
+                    name="workId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Work ID</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Your work ID" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                )}
+            </div>
             <DialogFooter>
               <Button type="submit">Save changes</Button>
             </DialogFooter>

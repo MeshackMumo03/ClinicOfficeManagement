@@ -22,7 +22,7 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "@/components/layout/loader";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";

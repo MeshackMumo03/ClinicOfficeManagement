@@ -70,16 +70,9 @@ export function Header() {
   const userRole = userData?.role || "patient";
 
   // Filter navigation links based on user role
-  let navLinks = allNavLinks.filter(link => link.roles.includes(userRole));
-  if (userRole === "admin") {
-    navLinks = allNavLinks.filter(l => l.label !== 'Admin'); // No need for a link to the admin dashboard itself
-    const hasAdminLink = navLinks.some(l => l.href === '/admin');
-    if (!hasAdminLink) {
-        navLinks.push({ href: "/admin", label: "Admin", roles: ["admin"] });
-    }
-    // ensure all links are shown for admin
-    navLinks = allNavLinks;
-  }
+  const navLinks = userRole === 'admin'
+    ? allNavLinks
+    : allNavLinks.filter(link => link.roles.includes(userRole));
 
   // Determine display name and avatar fallback.
   const displayName = userData?.name || user?.email || "User";
@@ -132,6 +125,17 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+           {userRole === 'admin' && (
+             <Link
+                href="/admin"
+                className={cn(
+                    "text-muted-foreground transition-colors hover:text-foreground font-medium",
+                    pathname.startsWith('/admin') ? "text-foreground" : "text-muted-foreground"
+                )}
+             >
+                Admin
+             </Link>
+           )}
         </nav>
         {/* Right section of the header with notifications and user menu. */}
         <div className="ml-auto flex items-center gap-4">
@@ -196,6 +200,22 @@ export function Header() {
                                   </Link>
                                   </li>
                               ))}
+                               {userRole === 'admin' && (
+                                 <li>
+                                  <Link
+                                      href="/admin"
+                                      className={cn(
+                                      "flex items-center gap-4 rounded-md px-4 py-2 text-lg font-medium transition-colors hover:bg-muted",
+                                      pathname.startsWith('/admin')
+                                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                          : "text-muted-foreground"
+                                      )}
+                                      onClick={() => setIsMobileMenuOpen(false)}
+                                  >
+                                      Admin
+                                  </Link>
+                                  </li>
+                               )}
                               </ul>
                           </nav>
                           </div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 // Import necessary hooks, components, and Firebase functions.
@@ -27,20 +28,20 @@ import { signOut } from "firebase/auth";
 import { useAuth } from "@/firebase";
 
 // Navigation links for the header.
-const navLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard/appointments", label: "Appointments" },
-    { href: "/dashboard/patients", label: "Patients" },
-    { href: "/dashboard/consultations", label: "Consultations" },
-    { href: "/dashboard/billing", label: "Billing" },
-    { href: "/dashboard/reports", label: "Reports" },
-    { href: "/dashboard/chat", label: "Messages" },
+const allNavLinks = [
+    { href: "/dashboard", label: "Dashboard", roles: ["admin", "doctor", "receptionist", "patient"] },
+    { href: "/dashboard/appointments", label: "Appointments", roles: ["admin", "doctor", "receptionist", "patient"] },
+    { href: "/dashboard/patients", label: "Patients", roles: ["admin", "doctor", "receptionist"] },
+    { href: "/dashboard/consultations", label: "Consultations", roles: ["admin", "doctor"] },
+    { href: "/dashboard/billing", label: "Billing", roles: ["admin", "receptionist", "patient"] },
+    { href: "/dashboard/reports", label: "Reports", roles: ["admin"] },
+    { href: "/dashboard/chat", label: "Messages", roles: ["admin", "doctor", "receptionist", "patient"] },
 ];
 
 /**
  * A utility function to get initials from a name.
- * @param name The full name.
- * @returns The initials of the name.
+ * @param {string} name The full name.
+ * @returns {The initials of the name.}
  */
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -65,6 +66,13 @@ export function Header() {
   );
   // Fetch user data from Firestore.
   const { data: userData } = useDoc(userDocRef);
+  const userRole = userData?.role || "patient";
+
+  // Filter navigation links based on user role
+  const navLinks = allNavLinks.filter(link => link.roles.includes(userRole));
+  if (userRole === "admin") {
+    navLinks.push({ href: "/admin", label: "Admin", roles: ["admin"] });
+  }
 
   // Determine display name and avatar fallback.
   const displayName = userData?.name || user?.email || "User";

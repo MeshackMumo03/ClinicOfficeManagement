@@ -44,6 +44,7 @@ const allNavLinks = [
  * @returns {The initials of the name.}
  */
 function getInitials(name: string) {
+  if (!name) return "U";
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
 }
 
@@ -69,12 +70,15 @@ export function Header() {
   const userRole = userData?.role || "patient";
 
   // Filter navigation links based on user role
-  const navLinks = allNavLinks.filter(link => link.roles.includes(userRole));
+  let navLinks = allNavLinks.filter(link => link.roles.includes(userRole));
   if (userRole === "admin") {
+    navLinks = allNavLinks.filter(l => l.label !== 'Admin'); // No need for a link to the admin dashboard itself
     const hasAdminLink = navLinks.some(l => l.href === '/admin');
     if (!hasAdminLink) {
         navLinks.push({ href: "/admin", label: "Admin", roles: ["admin"] });
     }
+    // ensure all links are shown for admin
+    navLinks = allNavLinks;
   }
 
   // Determine display name and avatar fallback.
@@ -122,7 +126,7 @@ export function Header() {
               href={link.href}
               className={cn(
                 "text-muted-foreground transition-colors hover:text-foreground font-medium",
-                (pathname.startsWith(link.href) && link.href !== "/dashboard") || pathname === link.href ? "text-foreground" : "text-muted-foreground"
+                (pathname.startsWith(link.href) && (link.href !== "/dashboard" && link.href !== "/admin" )) || pathname === link.href ? "text-foreground" : "text-muted-foreground"
               )}
             >
               {link.label}
@@ -148,7 +152,9 @@ export function Header() {
               <DropdownMenuContent align="end">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/profile">Profile</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Settings</DropdownMenuItem>
                   <DropdownMenuItem>Support</DropdownMenuItem>
                   <DropdownMenuSeparator />

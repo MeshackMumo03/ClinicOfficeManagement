@@ -26,6 +26,7 @@ import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "@/components/layout/loader";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { users } from "@/lib/data";
 
 // GoogleIcon component to display the Google logo.
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -78,7 +79,9 @@ export default function SignupPage() {
       return;
     }
 
-    if (!role) {
+    const selectedRole = role || users.find(u => u.email === email)?.role || 'patient';
+
+    if (!selectedRole) {
         toast({
             variant: "destructive",
             title: "Sign Up Failed",
@@ -108,14 +111,14 @@ export default function SignupPage() {
         uid: newUser.uid,
         name: name,
         email: newUser.email,
-        role: role,
+        role: selectedRole,
       };
 
-      if (role === 'doctor' && registrationNumber) {
+      if (selectedRole === 'doctor' && registrationNumber) {
         userData.registrationNumber = registrationNumber;
       }
 
-      if (role === 'receptionist' && workId) {
+      if (selectedRole === 'receptionist' && workId) {
         userData.workId = workId;
       }
 

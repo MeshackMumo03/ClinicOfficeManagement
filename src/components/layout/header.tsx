@@ -27,7 +27,7 @@ import { doc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useAuth } from "@/firebase";
 
-// Navigation links for the header.
+// Navigation links for the header, with role-based access control.
 const allNavLinks = [
     { href: "/dashboard", label: "Dashboard", roles: ["admin", "doctor", "receptionist", "patient"] },
     { href: "/dashboard/appointments", label: "Appointments", roles: ["admin", "doctor", "receptionist", "patient"] },

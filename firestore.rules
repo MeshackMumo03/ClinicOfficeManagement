@@ -1,3 +1,4 @@
+
 /**
  * @file Firebase Security Rules for Clinic Management System
  *
@@ -30,13 +31,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure access to user profiles. Only the authenticated user can read or write their own profile.
+     * @description Secure access to user profiles. An authenticated user can read any user's profile to check roles,
+     * but can only write to their own profile.
      * @path /users/{userId}
-     * @allow (get, update) if isSignedIn() && isOwner(userId)
+     * @allow (get) if isSignedIn()
+     * @allow (update) if isSignedIn() && isOwner(userId)
      * @allow (create) if isSignedIn() && isOwner(userId) && request.auth.uid == userId
      * @deny (delete) Always deny user deletion through client-side rules.
      * @deny (list) Listing all users is prohibited.
-     * @principle Enforces user-ownership and prevents unauthorized data access.
+     * @principle Enforces user-ownership for writes and allows role-checking for reads.
      */
     match /users/{userId} {
       function isOwner(userId) {
@@ -47,7 +50,7 @@ service cloud.firestore {
         return request.auth != null;
       }
 
-      allow get: if isSignedIn() && isOwner(userId);
+      allow get: if isSignedIn();
       allow list: if false;
       allow create: if isSignedIn() && isOwner(userId) && request.auth.uid == userId;
       allow update: if isSignedIn() && isOwner(userId);

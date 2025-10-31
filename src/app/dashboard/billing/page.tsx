@@ -57,7 +57,7 @@ export default function BillingPage() {
                   <TableCell className="font-medium">{invoice.invoiceId}</TableCell>
                   <TableCell>{invoice.patientName}</TableCell>
                   <TableCell>{invoice.date}</TableCell>
-                  <TableCell>${invoice.amount.toFixed(2)}</TableCell>
+                  <TableCell>Ksh{invoice.amount.toFixed(2)}</TableCell>
                   <TableCell>
                     {/* Display a badge with a color corresponding to the invoice status. */}
                     <Badge variant={

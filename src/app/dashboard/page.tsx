@@ -105,7 +105,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">
-              ${totalPayments.toLocaleString()}
+              Ksh{totalPayments.toLocaleString()}
             </p>
           </CardContent>
         </Card>

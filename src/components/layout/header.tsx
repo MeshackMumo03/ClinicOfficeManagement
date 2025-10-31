@@ -20,6 +20,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import React from "react";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
+import { useAuth } from "@/firebase";
+
 
 const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
@@ -31,13 +36,35 @@ const navLinks = [
     { href: "/dashboard/chat", label: "Messages" },
 ];
 
+function getInitials(name: string) {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase();
+}
+
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const auth = useAuth();
 
-  const handleLogout = () => {
-    router.push('/login');
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, "users", user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData } = useDoc(userDocRef);
+
+  const displayName = userData?.name || user?.email || "User";
+  const avatarFallback = displayName ? getInitials(displayName) : "U";
+
+
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        router.push('/login');
+    } catch (error) {
+        console.error("Error signing out: ", error);
+    }
   };
 
   return (
@@ -71,8 +98,8 @@ export function Header() {
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar className="h-9 w-9">
-                    <AvatarImage data-ai-hint="person face" src="https://picsum.photos/seed/amelia/100/100" alt="Amelia" />
-                    <AvatarFallback>A</AvatarFallback>
+                    <AvatarImage data-ai-hint="person face" src={user?.photoURL || undefined} alt={displayName} />
+                    <AvatarFallback>{avatarFallback}</AvatarFallback>
                 </Avatar>
                 <span className="sr-only">Toggle user menu</span>
                 </Button>

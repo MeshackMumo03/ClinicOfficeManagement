@@ -1,7 +1,22 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useDoc, useUser, useFirestore, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 export default function DashboardPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, "users", user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData } = useDoc(userDocRef);
+
+  const displayName = userData?.name || user?.email || "User";
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -9,7 +24,7 @@ export default function DashboardPage() {
           <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
             Dashboard
           </h1>
-          <p className="text-muted-foreground">Welcome back, Amelia</p>
+          <p className="text-muted-foreground">Welcome back, {displayName}</p>
         </div>
       </div>
 

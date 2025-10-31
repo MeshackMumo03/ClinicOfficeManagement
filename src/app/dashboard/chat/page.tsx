@@ -10,6 +10,9 @@ function getInitials(name: string) {
 }
 
 export default function ChatPage() {
+  const hasPatients = patients.length > 0;
+  const firstPatient = hasPatients ? patients[0] : null;
+
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)]">
       <div>
@@ -41,47 +44,58 @@ export default function ChatPage() {
                             </div>
                         </Button>
                     ))}
+                    {!hasPatients && (
+                        <p className="p-4 text-sm text-muted-foreground">No patients found.</p>
+                    )}
                 </nav>
             </div>
         </div>
         <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full bg-muted/20">
-            <div className="p-4 border-b flex items-center gap-4">
-                 <Avatar>
-                    <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${patients[0].name.replace(/\s/g, '')}/100/100`} />
-                    <AvatarFallback>{getInitials(patients[0].name)}</AvatarFallback>
-                </Avatar>
-                <h2 className="font-semibold text-lg">{patients[0].name}</h2>
+          {firstPatient ? (
+            <>
+              <div className="p-4 border-b flex items-center gap-4">
+                  <Avatar>
+                      <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${firstPatient.name.replace(/\s/g, '')}/100/100`} />
+                      <AvatarFallback>{getInitials(firstPatient.name)}</AvatarFallback>
+                  </Avatar>
+                  <h2 className="font-semibold text-lg">{firstPatient.name}</h2>
+              </div>
+              <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                  <div className="flex items-start gap-3 justify-end">
+                      <div className="bg-primary text-primary-foreground p-3 rounded-lg max-w-xs">
+                          <p>Hello Dr. Smith, I have a question about my prescription.</p>
+                          <p className="text-xs text-right mt-1 opacity-70">3:45 PM</p>
+                      </div>
+                      <Avatar>
+                          <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${firstPatient.name.replace(/\s/g, '')}/100/100`} />
+                          <AvatarFallback>{getInitials(firstPatient.name)}</AvatarFallback>
+                      </Avatar>
+                  </div>
+                  <div className="flex items-start gap-3">
+                      <Avatar>
+                          <AvatarImage data-ai-hint="professional person" src="https://picsum.photos/seed/doc1/100/100" />
+                          <AvatarFallback>DS</AvatarFallback>
+                      </Avatar>
+                      <div className="bg-card p-3 rounded-lg max-w-xs">
+                          <p>Hi {firstPatient.name}, of course. What is your question?</p>
+                          <p className="text-xs text-right mt-1 text-muted-foreground">3:46 PM</p>
+                      </div>
+                  </div>
+              </div>
+              <div className="p-4 border-t bg-card">
+                  <div className="relative">
+                      <Input placeholder="Type your message..." className="pr-12" />
+                      <Button variant="ghost" size="icon" className="absolute top-1/2 right-1.5 -translate-y-1/2 h-8 w-8 text-muted-foreground">
+                          <SendHorizonal className="h-5 w-5" />
+                      </Button>
+                  </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-muted-foreground">Select a conversation to start messaging.</p>
             </div>
-            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-                <div className="flex items-start gap-3 justify-end">
-                    <div className="bg-primary text-primary-foreground p-3 rounded-lg max-w-xs">
-                        <p>Hello Dr. Smith, I have a question about my prescription.</p>
-                        <p className="text-xs text-right mt-1 opacity-70">3:45 PM</p>
-                    </div>
-                    <Avatar>
-                        <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${patients[0].name.replace(/\s/g, '')}/100/100`} />
-                        <AvatarFallback>{getInitials(patients[0].name)}</AvatarFallback>
-                    </Avatar>
-                </div>
-                <div className="flex items-start gap-3">
-                    <Avatar>
-                        <AvatarImage data-ai-hint="professional person" src="https://picsum.photos/seed/doc1/100/100" />
-                        <AvatarFallback>DS</AvatarFallback>
-                    </Avatar>
-                    <div className="bg-card p-3 rounded-lg max-w-xs">
-                        <p>Hi {patients[0].name}, of course. What is your question?</p>
-                        <p className="text-xs text-right mt-1 text-muted-foreground">3:46 PM</p>
-                    </div>
-                </div>
-            </div>
-            <div className="p-4 border-t bg-card">
-                 <div className="relative">
-                    <Input placeholder="Type your message..." className="pr-12" />
-                    <Button variant="ghost" size="icon" className="absolute top-1/2 right-1.5 -translate-y-1/2 h-8 w-8 text-muted-foreground">
-                        <SendHorizonal className="h-5 w-5" />
-                    </Button>
-                </div>
-            </div>
+          )}
         </div>
       </div>
     </div>

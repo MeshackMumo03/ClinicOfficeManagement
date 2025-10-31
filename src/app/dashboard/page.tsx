@@ -1,10 +1,21 @@
 "use client";
 
 // Import necessary components and hooks.
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  useDoc,
+  useUser,
+  useFirestore,
+  useMemoFirebase,
+  useCollection,
+} from "@/firebase";
+import { doc, collection } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDoc, useUser, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
 
 /**
  * DashboardPage component to display the main dashboard.
@@ -25,6 +36,32 @@ export default function DashboardPage() {
 
   // Determine the display name, defaulting to email if name is not available.
   const displayName = userData?.name || user?.email || "User";
+
+  // Fetch appointments, patients, and billings data from Firestore.
+  const appointmentsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, "appointments") : null),
+    [firestore]
+  );
+  const { data: appointments } = useCollection(appointmentsQuery);
+
+  const patientsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, "patients") : null),
+    [firestore]
+  );
+  const { data: patients } = useCollection(patientsQuery);
+
+  const billingsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, "billings") : null),
+    [firestore]
+  );
+  const { data: billings } = useCollection(billingsQuery);
+
+  // Calculate total payments processed.
+  const totalPayments = billings
+    ? billings
+        .filter((billing: any) => billing.paymentStatus === "Paid")
+        .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0)
+    : 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -47,7 +84,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">25</p>
+            <p className="text-4xl font-bold">{appointments?.length || 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -57,7 +94,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">10</p>
+            <p className="text-4xl font-bold">{patients?.length || 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -67,7 +104,9 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">$5,000</p>
+            <p className="text-4xl font-bold">
+              ${totalPayments.toLocaleString()}
+            </p>
           </CardContent>
         </Card>
       </div>

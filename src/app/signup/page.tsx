@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -38,7 +39,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function SignupPage() {
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState("patient");
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
@@ -128,9 +129,29 @@ export default function SignupPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!role) {
+      toast({
+        variant: "destructive",
+        title: "Sign Up Failed",
+        description: "Please select a role before signing up with Google.",
+      });
+      return;
+    }
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const newUser = result.user;
+
+      const userDocRef = doc(firestore, "users", newUser.uid);
+      const userData = {
+        uid: newUser.uid,
+        name: newUser.displayName,
+        email: newUser.email,
+        role: role, // Default role for Google sign-up
+      };
+
+      setDocumentNonBlocking(userDocRef, userData, { merge: true });
+
       router.push("/dashboard");
     } catch (error: any) {
       toast({
@@ -202,7 +223,7 @@ export default function SignupPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="role">Role</Label>
-              <Select onValueChange={setRole}>
+              <Select onValueChange={setRole} defaultValue="patient">
                 <SelectTrigger id="role">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
@@ -210,7 +231,6 @@ export default function SignupPage() {
                   <SelectItem value="doctor">Doctor</SelectItem>
                   <SelectItem value="patient">Patient</SelectItem>
                   <SelectItem value="receptionist">Receptionist</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -19,6 +19,7 @@ import {
     SheetContent,
     SheetTrigger,
   } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import React from "react";
@@ -96,6 +97,13 @@ export function Header() {
     patient: 'bg-role-patient',
   }[userRole] || 'bg-primary';
 
+  const roleColorClass = {
+    admin: 'bg-role-admin',
+    doctor: 'bg-role-doctor',
+    receptionist: 'bg-role-receptionist',
+    patient: 'bg-role-patient',
+  }[userRole] || 'bg-primary';
+
   return (
     <header className="sticky top-0 z-40 flex h-20 flex-col items-center gap-4 border-b bg-background px-6">
       {/* Animated Role Bar */}
@@ -145,12 +153,15 @@ export function Header() {
               </Button>
               <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
+                  <Button variant="ghost" className="flex items-center gap-3 px-2 h-12">
                   <Avatar className="h-9 w-9">
                       <AvatarImage data-ai-hint="person face" src={user?.photoURL || undefined} alt={displayName} />
                       <AvatarFallback>{avatarFallback}</AvatarFallback>
                   </Avatar>
-                  <span className="sr-only">Toggle user menu</span>
+                   <div className="flex flex-col items-start">
+                        <span className="font-medium text-sm">{displayName}</span>
+                        <Badge className={cn("text-xs capitalize -ml-0.5", roleColorClass)}>{userRole}</Badge>
+                    </div>
                   </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

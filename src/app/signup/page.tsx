@@ -22,10 +22,10 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { doc } from "firebase/firestore";
+import { doc, collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "@/components/layout/loader";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 // GoogleIcon component to display the Google logo.
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -68,6 +68,10 @@ export default function SignupPage() {
     const confirmPassword = e.currentTarget["confirm-password"].value;
     const registrationNumber = e.currentTarget["registration-number"]?.value;
     const workId = e.currentTarget["work-id"]?.value;
+    
+    const [firstName, ...lastNameParts] = name.split(' ');
+    const lastName = lastNameParts.join(' ');
+
 
     if (password !== confirmPassword) {
       toast({
@@ -97,31 +101,50 @@ export default function SignupPage() {
       );
       const newUser = userCredential.user;
 
-      // Save user info to Firestore.
+      // Save user role info to /users
       const userDocRef = doc(firestore, "users", newUser.uid);
       const userData: {
         uid: string,
         name: string,
         email: string | null,
         role: string,
-        registrationNumber?: string,
-        workId?: string,
       } = {
         uid: newUser.uid,
         name: name,
         email: newUser.email,
         role: selectedRole,
       };
+      await setDocumentNonBlocking(userDocRef, userData, { merge: true });
 
-      if (selectedRole === 'doctor' && registrationNumber) {
-        userData.registrationNumber = registrationNumber;
+
+      // Create role-specific records
+      if (selectedRole === 'patient') {
+        const patientDocRef = doc(firestore, 'patients', newUser.uid);
+        const patientData = {
+          id: newUser.uid,
+          firstName: firstName,
+          lastName: lastName,
+          email: newUser.email,
+          // Add default/placeholder values for other required fields
+          dateOfBirth: 'N/A',
+          gender: 'N/A',
+          contactNumber: 'N/A',
+          address: 'N/A',
+        };
+        await setDocumentNonBlocking(patientDocRef, patientData, { merge: true });
+      } else if (selectedRole === 'doctor') {
+        const doctorDocRef = doc(firestore, 'doctors', newUser.uid);
+        const doctorData = {
+          id: newUser.uid,
+          firstName: firstName,
+          lastName: lastName,
+          email: newUser.email,
+          specialization: 'General Practice',
+          contactNumber: 'N/A',
+          registrationNumber: registrationNumber,
+        };
+        await setDocumentNonBlocking(doctorDocRef, doctorData, { merge: true });
       }
-
-      if (selectedRole === 'receptionist' && workId) {
-        userData.workId = workId;
-      }
-
-      setDocumentNonBlocking(userDocRef, userData, { merge: true });
 
       toast({
         title: "Sign Up Successful",
@@ -156,6 +179,10 @@ export default function SignupPage() {
     try {
       const result = await signInWithPopup(auth, provider);
       const newUser = result.user;
+      const name = newUser.displayName || '';
+      const [firstName, ...lastNameParts] = name.split(' ');
+      const lastName = lastNameParts.join(' ');
+
 
       const userDocRef = doc(firestore, "users", newUser.uid);
       const userData = {
@@ -166,6 +193,23 @@ export default function SignupPage() {
       };
 
       setDocumentNonBlocking(userDocRef, userData, { merge: true });
+      
+      // Create patient record for Google Sign in
+      if (role === 'patient') {
+        const patientDocRef = doc(firestore, 'patients', newUser.uid);
+        const patientData = {
+          id: newUser.uid,
+          firstName: firstName,
+          lastName: lastName,
+          email: newUser.email,
+          dateOfBirth: 'N/A',
+          gender: 'N/A',
+          contactNumber: 'N/A',
+          address: 'N/A',
+        };
+        await setDocumentNonBlocking(patientDocRef, patientData, { merge: true });
+      }
+
 
       if (role === 'admin') {
         router.push("/admin");

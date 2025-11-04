@@ -82,7 +82,7 @@ export default function DashboardPage() {
 
   // --- Loading State and Calculations ---
   
-  const pageIsLoading = isUserAuthLoading || isUserDataLoading || (userRole && (appointmentsLoading || patientsLoading || billingsLoading));
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || (userRole && (appointmentsLoading || (patientsLoading && (userRole !== 'patient')) || (billingsLoading && (userRole !== 'doctor'))));
 
   if (pageIsLoading) {
     return <Loader />;
@@ -144,6 +144,21 @@ export default function DashboardPage() {
                </p>
              </CardContent>
            </Card>
+        )}
+
+        {userRole === 'patient' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-normal text-muted-foreground">
+                Total Paid
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold">
+                Ksh{totalPayments.toLocaleString()}
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
 

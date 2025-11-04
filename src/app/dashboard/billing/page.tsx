@@ -54,7 +54,8 @@ export default function BillingPage() {
       return billingsCollection;
     }
 
-    return null; // For roles like doctors who can't see billings.
+    // Doctors shouldn't see any billing info.
+    return null;
   }, [firestore, user, userRole]);
 
   const { data: invoices, isLoading: billingsLoading } = useCollection(billingsQuery);
@@ -162,7 +163,7 @@ export default function BillingPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={canViewAllBillings ? 6 : 4} className="text-center">
+                    <TableCell colSpan={userRole === 'patient' ? 4 : 6} className="text-center">
                         No billing records found.
                     </TableCell>
                 </TableRow>

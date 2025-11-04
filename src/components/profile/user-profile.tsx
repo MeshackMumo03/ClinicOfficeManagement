@@ -8,6 +8,8 @@ import { InfoCard } from "./info-card";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { EditProfileDialog } from "./edit-profile-dialog";
+import { ShieldCheck } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 // Define the shape of the user object
 type User = {
@@ -90,7 +92,22 @@ export function UserProfile({ user }: UserProfileProps) {
       {/* Profile Details */}
       <div className="space-y-6">
         <InfoCard title="Personal Information" items={personalInfo} />
-        {roleSpecificInfo.some(item => item.value) && (
+        
+        {role === 'admin' && (
+             <Card>
+             <CardHeader className="flex flex-row items-center gap-4">
+               <ShieldCheck className="h-8 w-8 text-role-admin" />
+               <CardTitle className="text-xl">Admin Privileges</CardTitle>
+             </CardHeader>
+             <CardContent>
+               <p className="text-muted-foreground">
+                 As an administrator, you have full access to all system features, including user management, billing, and reports.
+               </p>
+             </CardContent>
+           </Card>
+        )}
+
+        {role !== 'admin' && roleSpecificInfo.some(item => item.value) && (
             <InfoCard title="Professional Information" items={roleSpecificInfo} />
         )}
       </div>

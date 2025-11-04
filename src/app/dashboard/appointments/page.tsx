@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 import { PlusCircle, ListFilter } from "lucide-react";
 import { Loader } from "@/components/layout/loader";
 
@@ -39,7 +39,7 @@ export default function AppointmentsPage() {
     const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
     const doctorsQuery = useMemoFirebase(
-      () => (firestore ? query(collection(firestore, "users"), where("role", "==", "doctor")) : null),
+      () => (firestore ? collection(firestore, "doctors") : null),
       [firestore]
     );
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
@@ -79,7 +79,7 @@ export default function AppointmentsPage() {
             {/* Map through doctors to create checkbox items for the filter. */}
             {doctors?.map((doctor) => (
                 <DropdownMenuCheckboxItem key={doctor.id}>
-                    {doctor.name}
+                    {doctor.firstName} {doctor.lastName}
                 </DropdownMenuCheckboxItem>
             ))}
           </DropdownMenuContent>

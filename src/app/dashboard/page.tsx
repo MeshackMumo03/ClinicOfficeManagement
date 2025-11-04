@@ -55,7 +55,7 @@ export default function DashboardPage() {
   const { data: appointments } = useCollection(appointmentsQuery);
 
   const patientsQuery = useMemoFirebase(
-    () => (firestore && userRole !== 'patient' ? collection(firestore, "patients") : null),
+    () => (firestore && userRole && userRole !== 'patient' ? collection(firestore, "patients") : null),
     [firestore, userRole]
   );
   const { data: patients } = useCollection(patientsQuery);

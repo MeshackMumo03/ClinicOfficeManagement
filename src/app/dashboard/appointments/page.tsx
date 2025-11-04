@@ -42,15 +42,12 @@ export default function AppointmentsPage() {
     const userRole = userData?.role;
 
     const appointmentsQuery = useMemoFirebase(() => {
-      if (!firestore || !user) return null;
+      if (!firestore || !user || !userRole) return null;
       if (userRole === "patient") {
         return query(collection(firestore, "appointments"), where("patientId", "==", user.uid));
       }
       // For other roles (doctor, admin, receptionist), fetch all appointments
-      if (userRole) {
-        return collection(firestore, "appointments");
-      }
-      return null;
+      return collection(firestore, "appointments");
     }, [firestore, user, userRole]);
 
     const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
@@ -61,26 +58,48 @@ export default function AppointmentsPage() {
     );
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
 
-    const patientsQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, "patients") : null),
-        [firestore]
-    );
+    const canFetchAllPatients = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
+
+    // Fetch all patients only if the user has the right role.
+    const patientsQuery = useMemoFirebase(() => {
+      if (!firestore || !canFetchAllPatients) return null;
+      return collection(firestore, "patients");
+    }, [firestore, canFetchAllPatients]);
     const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
+    // If the user is a patient, fetch only their own document for name display.
+    const singlePatientDocRef = useMemoFirebase(() => {
+        if (!firestore || !user || userRole !== 'patient') return null;
+        return doc(firestore, 'patients', user.uid);
+    }, [firestore, user, userRole]);
+    const { data: singlePatient, isLoading: singlePatientLoading } = useDoc(singlePatientDocRef);
+
+
     const getPatientName = (patientId: string) => {
-        const patient = patients?.find(p => p.id === patientId);
-        return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
+        if (userRole === 'patient' && singlePatient) {
+            return `${singlePatient.firstName} ${singlePatient.lastName}`;
+        }
+        if (patients) {
+            const patient = patients.find(p => p.id === patientId);
+            return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
+        }
+        return "Loading...";
     }
 
     const getDoctorName = (doctorId: string) => {
-        const doctor = doctors?.find(d => d.id === doctorId);
-        return doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : "Unknown Doctor";
+        if (doctors) {
+            const doctor = doctors.find(d => d.id === doctorId);
+            return doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : "Unknown Doctor";
+        }
+        return "Loading...";
     }
     
     // Get unique statuses from appointments for the filter dropdown.
     const statuses = appointments ? Array.from(new Set(appointments.map((a: any) => a.status))) : [];
 
-    if (isUserLoading || isUserDataLoading || appointmentsLoading || doctorsLoading || patientsLoading) {
+    const pageIsLoading = isUserLoading || isUserDataLoading || appointmentsLoading || doctorsLoading || (canFetchAllPatients && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
+
+    if (pageIsLoading) {
         return <Loader />;
     }
 
@@ -205,3 +224,5 @@ export default function AppointmentsPage() {
     </div>
   );
 }
+
+    

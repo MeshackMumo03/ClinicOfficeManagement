@@ -25,6 +25,7 @@ import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@
 import { collection, query, where, doc } from "firebase/firestore";
 import { PlusCircle, ListFilter } from "lucide-react";
 import { Loader } from "@/components/layout/loader";
+import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 
 /**
  * AppointmentsPage component to display and manage appointments.
@@ -123,10 +124,12 @@ export default function AppointmentsPage() {
           <h1 className="font-headline text-3xl md:text-4xl">Appointments</h1>
         </div>
         {userRole !== 'patient' && (
-          <Button>
-            <PlusCircle className="mr-2" />
-            New Appointment
-          </Button>
+          <NewAppointmentDialog>
+            <Button>
+              <PlusCircle className="mr-2" />
+              New Appointment
+            </Button>
+          </NewAppointmentDialog>
         )}
       </div>
 
@@ -207,7 +210,7 @@ export default function AppointmentsPage() {
                     {getPatientName(appointment.patientId)}
                   </TableCell>
                   <TableCell className="text-primary hover:underline cursor-pointer">{getDoctorName(appointment.doctorId)}</TableCell>
-                  <TableCell>{new Date(appointment.appointmentDateTime).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}, {new Date(appointment.appointmentDateTime).toLocaleTimeString()}</TableCell>
+                  <TableCell>{new Date(appointment.appointmentDateTime).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell>
                   <TableCell>
                     {/* Display a badge with a color corresponding to the appointment status. */}
                     <Badge

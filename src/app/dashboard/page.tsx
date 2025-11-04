@@ -24,38 +24,32 @@ import { Loader } from "@/components/layout/loader";
  * It shows a welcome message and role-based key metrics and quick actions.
  */
 export default function DashboardPage() {
-  // Get the current authenticated user and Firestore instance.
   const { user, isUserLoading: isUserAuthLoading } = useUser();
   const firestore = useFirestore();
 
-  // Create a memoized reference to the user's document in Firestore.
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
   );
-  // Fetch the user's data from Firestore.
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   const userRole = userData?.role;
-
-  // Determine the display name, defaulting to email if name is not available.
   const displayName = userData?.name || user?.email || "User";
 
-  // Fetch appointments from Firestore based on the user's role.
+  // Role-aware query for appointments
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !userRole) return null;
     if (userRole === "patient") {
-      // Patients only see their own appointments.
       return query(
         collection(firestore, "appointments"),
         where("patientId", "==", user.uid)
       );
     }
-    // Other roles see all appointments.
+    // For admin, doctor, receptionist
     return collection(firestore, "appointments");
   }, [firestore, user, userRole]);
   const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
-  // Fetch patients only if the user has a role that is allowed to see them.
+  // Fetch patients ONLY for staff roles
   const canQueryPatients = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
   const patientsQuery = useMemoFirebase(
     () => (firestore && canQueryPatients ? collection(firestore, "patients") : null),
@@ -63,30 +57,29 @@ export default function DashboardPage() {
   );
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
-  // Fetch billings only if the user has a role that is allowed to see them.
-  const canQueryBillings = userRole === 'receptionist' || userRole === 'admin' || userRole === 'patient';
+  // Role-aware query for billings
   const billingsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !canQueryBillings) return null;
-    if (userRole === 'patient') {
-      // Patients should only query for their own billing records.
-      return query(
-        collection(firestore, "billings"),
-        where("patientId", "==", user.uid)
-      );
-    }
-    // Receptionists and Admins can see all billing records.
-    return collection(firestore, "billings");
-  }, [firestore, user, userRole, canQueryBillings]);
+      if (!firestore || !user || !userRole) return null;
+      if (userRole === "patient") {
+          return query(
+              collection(firestore, "billings"),
+              where("patientId", "==", user.uid)
+          );
+      }
+      if (userRole === 'admin' || userRole === 'receptionist') {
+          return collection(firestore, "billings");
+      }
+      return null; // Doctors don't see billing info on the dashboard
+  }, [firestore, user, userRole]);
   const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);
 
-
-  // Calculate total payments processed for non-patient roles.
+  // Calculate total payments processed. This is safe because `billings` will be null for roles without permission.
   const totalPayments =
     billings
       ?.filter((billing: any) => billing.paymentStatus === "paid")
       .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
       
-  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || (canQueryPatients && patientsLoading) || (canQueryBillings && billingsLoading);
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || patientsLoading || billingsLoading;
 
   if (pageIsLoading) {
     return <Loader />;
@@ -117,7 +110,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {(userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') && (
+        {canQueryPatients && (
           <>
             <Card>
               <CardHeader>

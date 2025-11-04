@@ -125,7 +125,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="text-base font-normal text-muted-foreground">
                   Payments Processed
-                </Title>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-4xl font-bold">

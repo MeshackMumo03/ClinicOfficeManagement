@@ -1,10 +1,13 @@
 "use client"
-// Import necessary components from ShadCN, Lucide-React and local data.
+// Import necessary components from ShadCN, Lucide-React and firebase.
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, SendHorizonal } from "lucide-react";
-import { patients } from "@/lib/data";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { Loader } from "@/components/layout/loader";
+
 
 /**
  * A utility function to get the initials from a name.
@@ -12,6 +15,7 @@ import { patients } from "@/lib/data";
  * @returns The initials of the person.
  */
 function getInitials(name: string) {
+    if (!name) return "";
     return name.split(' ').map(n => n[0]).join('');
 }
 
@@ -20,8 +24,19 @@ function getInitials(name: string) {
  * It includes a list of patients and a chat window.
  */
 export default function ChatPage() {
-  const hasPatients = patients.length > 0;
-  const firstPatient = hasPatients ? patients[0] : null;
+  const firestore = useFirestore();
+  const patientsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, "patients") : null),
+    [firestore]
+  );
+  const { data: patients, isLoading } = useCollection(patientsQuery);
+
+  if (isLoading) {
+    return <Loader />;
+  }
+
+  const hasPatients = patients && patients.length > 0;
+  const firstPatient: any = hasPatients ? patients[0] : null;
 
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)]">
@@ -46,14 +61,14 @@ export default function ChatPage() {
             {/* List of patients. */}
             <div className="flex-1 overflow-y-auto">
                 <nav className="grid gap-1 p-2">
-                    {patients.slice(0, 5).map((patient, index) => (
+                    {hasPatients && patients.slice(0, 5).map((patient: any, index: number) => (
                         <Button key={patient.id} variant={index === 0 ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12">
                              <Avatar className="h-8 w-8">
-                                <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${patient.name.replace(/\s/g, '')}/100/100`} />
-                                <AvatarFallback>{getInitials(patient.name)}</AvatarFallback>
+                                <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${patient.firstName.replace(/\s/g, '')}/100/100`} />
+                                <AvatarFallback>{getInitials(patient.firstName)}</AvatarFallback>
                             </Avatar>
                             <div className="flex flex-col items-start">
-                                <span className="font-medium">{patient.name}</span>
+                                <span className="font-medium">{patient.firstName} {patient.lastName}</span>
                                 <span className="text-xs text-muted-foreground">Click to view message...</span>
                             </div>
                         </Button>
@@ -71,10 +86,10 @@ export default function ChatPage() {
               {/* Header of the chat window with patient's avatar and name. */}
               <div className="p-4 border-b flex items-center gap-4">
                   <Avatar>
-                      <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${firstPatient.name.replace(/\s/g, '')}/100/100`} />
-                      <AvatarFallback>{getInitials(firstPatient.name)}</AvatarFallback>
+                      <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${firstPatient.firstName.replace(/\s/g, '')}/100/100`} />
+                      <AvatarFallback>{getInitials(firstPatient.firstName)}</AvatarFallback>
                   </Avatar>
-                  <h2 className="font-semibold text-lg">{firstPatient.name}</h2>
+                  <h2 className="font-semibold text-lg">{firstPatient.firstName} {firstPatient.lastName}</h2>
               </div>
               {/* Message display area. */}
               <div className="flex-1 p-6 space-y-6 overflow-y-auto">
@@ -85,8 +100,8 @@ export default function ChatPage() {
                           <p className="text-xs text-right mt-1 opacity-70">3:45 PM</p>
                       </div>
                       <Avatar>
-                          <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${firstPatient.name.replace(/\s/g, '')}/100/100`} />
-                          <AvatarFallback>{getInitials(firstPatient.name)}</AvatarFallback>
+                          <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${firstPatient.firstName.replace(/\s/g, '')}/100/100`} />
+                          <AvatarFallback>{getInitials(firstPatient.firstName)}</AvatarFallback>
                       </Avatar>
                   </div>
                   {/* Example of an incoming message. */}
@@ -96,7 +111,7 @@ export default function ChatPage() {
                           <AvatarFallback>DS</AvatarFallback>
                       </Avatar>
                       <div className="bg-card p-3 rounded-lg max-w-xs">
-                          <p>Hi {firstPatient.name}, of course. What is your question?</p>
+                          <p>Hi {firstPatient.firstName}, of course. What is your question?</p>
                           <p className="text-xs text-right mt-1 text-muted-foreground">3:46 PM</p>
                       </div>
                   </div>

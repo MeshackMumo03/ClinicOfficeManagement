@@ -4,28 +4,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 // Define the type for a patient.
 type Patient = {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     email: string;
-    age: number;
+    dateOfBirth: string;
     gender: 'Male' | 'Female' | 'Other';
-    lastVisit: string;
-    status: 'Active' | 'Inactive';
+    contactNumber: string;
+    address: string;
+    medicalHistory?: string;
 };
 
 // Define the props for the PatientProfile component.
 interface PatientProfileProps {
-  patient: Patient & {
-    dob?: string,
-    contactNumber?: string,
-    address?: string,
-    insuranceProvider?: string,
-    policyNumber?: string,
-    emergencyContact?: {
-        name: string;
-        relationship: string;
-        contactNumber: string;
-    }
-  };
+  patient: Patient;
 }
 
 /**
@@ -71,23 +62,19 @@ export function PatientProfile({ patient }: PatientProfileProps) {
             <div className="p-6">
                 <h3 className="text-xl font-bold mb-4 font-headline">Personal Information</h3>
                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                    <InfoRow label="Full Name" value={patient.name} />
-                    <InfoRow label="Date of Birth" value={patient.dob} />
+                    <InfoRow label="Full Name" value={`${patient.firstName} ${patient.lastName}`} />
+                    <InfoRow label="Date of Birth" value={patient.dateOfBirth} />
                     <InfoRow label="Gender" value={patient.gender} />
                     <InfoRow label="Contact Number" value={patient.contactNumber} />
                     <InfoRow label="Email Address" value={patient.email} />
                     <InfoRow label="Address" value={patient.address} />
-                    <InfoRow label="Insurance Provider" value={patient.insuranceProvider} />
-                    <InfoRow label="Policy Number" value={patient.policyNumber} />
                 </div>
             </div>
-            {/* Emergency Contact information. */}
+            {/* Medical History information. */}
             <div className="p-6">
-                <h3 className="text-xl font-bold mb-4 font-headline">Emergency Contact</h3>
-                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                    <InfoRow label="Contact Name" value={patient.emergencyContact?.name} />
-                    <InfoRow label="Relationship" value={patient.emergencyContact?.relationship} />
-                    <InfoRow label="Contact Number" value={patient.emergencyContact?.contactNumber} />
+                <h3 className="text-xl font-bold mb-4 font-headline">Medical History</h3>
+                <div className="grid gap-1">
+                  <p className="text-foreground">{patient.medicalHistory || 'No medical history available.'}</p>
                 </div>
             </div>
           </div>

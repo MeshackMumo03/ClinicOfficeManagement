@@ -26,7 +26,6 @@ import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "@/components/layout/loader";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { users } from "@/lib/data";
 
 // GoogleIcon component to display the Google logo.
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -79,7 +78,7 @@ export default function SignupPage() {
       return;
     }
 
-    const selectedRole = role || users.find(u => u.email === email)?.role || 'patient';
+    const selectedRole = role;
 
     if (!selectedRole) {
         toast({

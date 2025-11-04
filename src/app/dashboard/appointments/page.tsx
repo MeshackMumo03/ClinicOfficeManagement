@@ -20,18 +20,36 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { appointments, users } from "@/lib/data";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 import { PlusCircle, ListFilter } from "lucide-react";
+import { Loader } from "@/components/layout/loader";
 
 /**
  * AppointmentsPage component to display and manage appointments.
  * It includes a table of appointments and filters for doctors, date, and status.
  */
 export default function AppointmentsPage() {
-    // Filter users to get only doctors for the filter dropdown.
-    const doctors = users.filter(u => u.role === 'Doctor');
+    const firestore = useFirestore();
+
+    const appointmentsQuery = useMemoFirebase(
+      () => (firestore ? collection(firestore, "appointments") : null),
+      [firestore]
+    );
+    const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
+
+    const doctorsQuery = useMemoFirebase(
+      () => (firestore ? query(collection(firestore, "users"), where("role", "==", "doctor")) : null),
+      [firestore]
+    );
+    const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
+    
     // Get unique statuses from appointments for the filter dropdown.
-    const statuses = Array.from(new Set(appointments.map(a => a.status)));
+    const statuses = appointments ? Array.from(new Set(appointments.map(a => a.status))) : [];
+
+    if (appointmentsLoading || doctorsLoading) {
+        return <Loader />;
+    }
 
   return (
     <div className="flex flex-col gap-8">
@@ -59,8 +77,8 @@ export default function AppointmentsPage() {
             <DropdownMenuLabel>Filter by Doctor</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {/* Map through doctors to create checkbox items for the filter. */}
-            {doctors.map((doctor) => (
-                <DropdownMenuCheckboxItem key={doctor.email}>
+            {doctors?.map((doctor) => (
+                <DropdownMenuCheckboxItem key={doctor.id}>
                     {doctor.name}
                 </DropdownMenuCheckboxItem>
             ))}
@@ -115,13 +133,13 @@ export default function AppointmentsPage() {
             </TableHeader>
             <TableBody>
               {/* Map through appointments to create a table row for each appointment. */}
-              {appointments.map((appointment) => (
+              {appointments && appointments.map((appointment) => (
                 <TableRow key={appointment.id}>
                   <TableCell className="font-medium">
                     {appointment.patientName}
                   </TableCell>
                   <TableCell className="text-primary hover:underline cursor-pointer">{appointment.doctorName}</TableCell>
-                  <TableCell className="text-primary hover:underline cursor-pointer">{new Date(appointment.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}, {appointment.time}</TableCell>
+                  <TableCell className="text-primary hover:underline cursor-pointer">{new Date(appointment.appointmentDateTime).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}, {new Date(appointment.appointmentDateTime).toLocaleTimeString()}</TableCell>
                   <TableCell>
                     {/* Display a badge with a color corresponding to the appointment status. */}
                     <Badge

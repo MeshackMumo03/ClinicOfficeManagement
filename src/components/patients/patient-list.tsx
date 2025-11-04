@@ -10,20 +10,22 @@ import Link from 'next/link';
 // Define the type for a patient.
 type Patient = {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
 };
 
 // Define the props for the PatientList component.
 interface PatientListProps {
   patients: Patient[];
-  selectedPatientId: string;
+  selectedPatientId?: string;
+  onSelectPatient: (id: string) => void;
 }
 
 /**
  * PatientList component to display a searchable list of patients.
  * @param {PatientListProps} props - The properties for the component.
  */
-export function PatientList({ patients, selectedPatientId }: PatientListProps) {
+export function PatientList({ patients, selectedPatientId, onSelectPatient }: PatientListProps) {
   return (
     <div className="border rounded-lg bg-card text-card-foreground">
       {/* Search input for filtering patients. */}
@@ -43,17 +45,17 @@ export function PatientList({ patients, selectedPatientId }: PatientListProps) {
         <div className="max-h-[600px] overflow-y-auto">
         {patients.map(patient => (
           // Link to the patient's profile page.
-          <Link href={`/dashboard/patients`} key={patient.id} passHref>
-            <div
-              className={cn(
-                "grid grid-cols-2 p-4 cursor-pointer hover:bg-muted/50",
-                patient.id === selectedPatientId && "bg-muted"
-              )}
-            >
-              <div className="font-medium text-foreground">{patient.name}</div>
-              <div className="text-primary">{patient.id}</div>
-            </div>
-          </Link>
+          <div
+            key={patient.id}
+            onClick={() => onSelectPatient(patient.id)}
+            className={cn(
+              "grid grid-cols-2 p-4 cursor-pointer hover:bg-muted/50",
+              patient.id === selectedPatientId && "bg-muted"
+            )}
+          >
+            <div className="font-medium text-foreground">{patient.firstName} {patient.lastName}</div>
+            <div className="text-primary">{patient.id}</div>
+          </div>
         ))}
         </div>
       </div>

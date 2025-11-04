@@ -152,10 +152,10 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-bold">Quick Actions</h2>
         <div className="flex flex-wrap gap-4">
-          {userRole === 'receptionist' && <Button>Register New Patient</Button>}
-          {userRole !== 'patient' && <Button variant="secondary">Book Appointment</Button>}
+          {(userRole === 'admin' || userRole === 'receptionist') && <Button>Register New Patient</Button>}
+          {(userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') && <Button variant="secondary">Book Appointment</Button>}
           {userRole === 'patient' && <Button variant="secondary">Book New Appointment</Button>}
-          {userRole === 'receptionist' && <Button variant="secondary">Generate Receipt</Button>}
+          {(userRole === 'admin' || userRole === 'receptionist') && <Button variant="secondary">Generate Receipt</Button>}
         </div>
       </div>
     </div>

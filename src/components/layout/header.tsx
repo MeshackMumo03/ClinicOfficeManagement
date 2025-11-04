@@ -70,7 +70,7 @@ export function Header() {
   const { data: userData } = useDoc(userDocRef);
   const userRole = userData?.role;
 
-  // Filter navigation links based on user role
+  // Filter navigation links based on user role. Admin sees all links.
   const navLinks = userRole === 'admin'
     ? allNavLinks
     : allNavLinks.filter(link => userRole && link.roles.includes(userRole));
@@ -90,25 +90,18 @@ export function Header() {
     }
   };
 
-  const roleBarColor = {
-    admin: 'bg-role-admin',
-    doctor: 'bg-role-doctor',
-    receptionist: 'bg-role-receptionist',
-    patient: 'bg-role-patient',
-  }[userRole || ''] || 'bg-primary';
-
   const roleColorClass = {
     admin: 'bg-role-admin',
     doctor: 'bg-role-doctor',
     receptionist: 'bg-role-receptionist',
     patient: 'bg-role-patient',
-  }[userRole || ''] || 'bg-primary';
+  }[userRole] || 'bg-primary';
 
   return (
     <header className="sticky top-0 z-40 flex h-20 flex-col items-center gap-4 border-b bg-background px-6">
       {/* Animated Role Bar */}
       <div className="w-full absolute top-0 left-0 h-1">
-        <div className={cn('h-full animate-role-bar-in', roleBarColor)} />
+        <div className={cn('h-full animate-role-bar-in', roleColorClass)} />
       </div>
 
       <div className="flex items-center w-full h-full">

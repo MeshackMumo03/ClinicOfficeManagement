@@ -72,10 +72,12 @@ service cloud.firestore {
 
     /**
      * @description Patients should be readable by doctors, receptionists, and admins.
+     * Patients can read their own document.
      * @path /patients/{patientId}
      */
     match /patients/{patientId} {
-      allow get, list: if isDoctor() || isReceptionist() || isAdmin();
+      allow get: if (isPatient() && isOwner(patientId)) || isDoctor() || isReceptionist() || isAdmin();
+      allow list: if isDoctor() || isReceptionist() || isAdmin();
       allow create, update, delete: if isDoctor() || isReceptionist() || isAdmin();
     }
 

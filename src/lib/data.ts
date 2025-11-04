@@ -75,5 +75,5 @@ export const users: User[] = [
     { name: 'Dr. Emily Carter', email: 'emily.carter@clinicoffice.com', role: 'doctor', password: 'password123' },
     { name: 'Dr. Ben Hanson', email: 'ben.hanson@clinicoffice.com', role: 'doctor', password: 'password123' },
     { name: 'Sarah Lee', email: 'sarah.lee@clinicoffice.com', role: 'receptionist', password: 'password123' },
-    { name: 'Admin User', email: 'admin@clinicoffice.com', role: 'admin', password: 'admin123' },
+    { name: 'Admin User', email: 'admin@clinicoffice.com', role: 'admin', password: 'Admin@1234' },
 ];

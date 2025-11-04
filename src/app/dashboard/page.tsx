@@ -60,11 +60,23 @@ export default function DashboardPage() {
   );
   const { data: patients } = useCollection(patientsQuery);
 
-  const billingsQuery = useMemoFirebase(
-    () => (firestore && userRole !== 'patient' ? collection(firestore, "billings") : null),
-    [firestore, userRole]
-  );
+  const billingsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    if (userRole === 'patient') {
+      // Patients should only query for their own billing records.
+      return query(
+        collection(firestore, "billings"),
+        where("patientId", "==", user.uid)
+      );
+    }
+    // Receptionists and Admins can see all billing records.
+    if (userRole === 'receptionist' || userRole === 'admin') {
+      return collection(firestore, "billings");
+    }
+    return null; // Doctors and others shouldn't query billings on the dashboard.
+  }, [firestore, user, userRole]);
   const { data: billings } = useCollection(billingsQuery);
+
 
   // Calculate total payments processed for non-patient roles.
   const totalPayments =
@@ -113,7 +125,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="text-base font-normal text-muted-foreground">
                   Payments Processed
-                </CardTitle>
+                </Title>
               </CardHeader>
               <CardContent>
                 <p className="text-4xl font-bold">

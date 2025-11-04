@@ -10,13 +10,91 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  User,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "@/components/layout/loader";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+
+/**
+ * Ensures that a corresponding role-specific document exists for a user.
+ * If the document doesn't exist, it creates one.
+ * @param db Firestore instance.
+ * @param user The authenticated user object.
+ * @param userRole The role of the user (e.g., 'patient', 'doctor').
+ */
+const ensureRoleDocumentExists = async (db: any, user: User, userRole: string) => {
+  if (!userRole || !user) return;
+
+  const name = user.displayName || 'Unnamed User';
+  const [firstName, ...lastNameParts] = name.split(' ');
+  const lastName = lastNameParts.join(' ') || ' ';
+
+
+  if (userRole === 'patient') {
+    const patientDocRef = doc(db, 'patients', user.uid);
+    const patientDoc = await getDoc(patientDocRef);
+    if (!patientDoc.exists()) {
+      const patientData = {
+        id: user.uid,
+        firstName: firstName,
+        lastName: lastName,
+        email: user.email,
+        dateOfBirth: 'N/A',
+        gender: 'N/A',
+        contactNumber: 'N/A',
+        address: 'N/A',
+      };
+      // Using non-blocking update for responsiveness
+      setDocumentNonBlocking(patientDocRef, patientData, { merge: true });
+    }
+  } else if (userRole === 'doctor') {
+    const doctorDocRef = doc(db, 'doctors', user.uid);
+    const doctorDoc = await getDoc(doctorDocRef);
+    if (!doctorDoc.exists()) {
+      const doctorData = {
+        id: user.uid,
+        firstName: firstName,
+        lastName: lastName,
+        email: user.email,
+        specialization: 'General Practice',
+        contactNumber: 'N/A',
+      };
+      setDocumentNonBlocking(doctorDocRef, doctorData, { merge: true });
+    }
+  }
+};
+
+
+/**
+ * Handles the post-login logic: checking role, ensuring data exists, and redirecting.
+ * @param db Firestore instance.
+ * @param user The authenticated user object.
+ * @param router The Next.js router instance.
+ */
+const handlePostLogin = async (db: any, user: User, router: any) => {
+    const userDocRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(userDocRef);
+
+    if (docSnap.exists()) {
+        const userData = docSnap.data();
+        await ensureRoleDocumentExists(db, user, userData.role);
+
+        if (userData.role === 'admin') {
+            router.push("/admin");
+        } else {
+            router.push("/dashboard");
+        }
+    } else {
+        // Fallback for users who might not have a user document yet.
+        router.push("/dashboard");
+    }
+};
+
 
 /**
  * LoginPage component for user authentication.
@@ -32,14 +110,7 @@ export default function LoginPage() {
   // Redirect to dashboard if user is already logged in.
   useEffect(() => {
     if (!isUserLoading && user) {
-      const userDocRef = doc(firestore, "users", user.uid);
-      getDoc(userDocRef).then((docSnap) => {
-        if (docSnap.exists() && docSnap.data().role === 'admin') {
-          router.push("/admin");
-        } else {
-          router.push("/dashboard");
-        }
-      });
+        handlePostLogin(firestore, user, router);
     }
   }, [user, isUserLoading, router, firestore]);
 
@@ -49,18 +120,8 @@ export default function LoginPage() {
     const email = e.currentTarget.email.value;
     const password = e.currentTarget.password.value;
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Check user role from Firestore
-      const userDocRef = doc(firestore, "users", user.uid);
-      const docSnap = await getDoc(userDocRef);
-
-      if (docSnap.exists() && docSnap.data().role === 'admin') {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+      // This will trigger the useEffect hook above upon successful login
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       toast({
         variant: "destructive",

@@ -18,8 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
-import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
 
 /**
@@ -30,14 +30,44 @@ export default function BillingPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, "users", user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  const userRole = userData?.role;
+
   const billingsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, "billings"), where("patientId", "==", user.uid));
-  }, [firestore, user]);
+    if (!firestore || !user || !userRole) return null;
+    if (userRole === "patient") {
+      return query(collection(firestore, "billings"), where("patientId", "==", user.uid));
+    }
+    // For admin/receptionist, get all billings
+    return collection(firestore, "billings");
+  }, [firestore, user, userRole]);
 
   const { data: invoices, isLoading: billingsLoading } = useCollection(billingsQuery);
 
-  if (isUserLoading || billingsLoading) {
+  const patientsQuery = useMemoFirebase(
+    () => (firestore && userRole !== 'patient' ? collection(firestore, "patients") : null),
+    [firestore, userRole]
+  );
+  const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
+
+  const getPatientName = (patientId: string) => {
+    if (patients) {
+        const patient = patients.find(p => p.id === patientId);
+        return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
+    }
+    if (userRole === 'patient' && userData?.name) {
+      return userData.name;
+    }
+    return "Loading...";
+  }
+
+  const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (userRole !== 'patient' && patientsLoading);
+
+  if (pageIsLoading) {
     return <Loader />;
   }
 
@@ -62,9 +92,11 @@ export default function BillingPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
+                {userRole !== 'patient' && (
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -72,7 +104,7 @@ export default function BillingPage() {
               {invoices && invoices.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium">{invoice.id}</TableCell>
-                  <TableCell>{invoice.patientId}</TableCell>
+                  <TableCell>{getPatientName(invoice.patientId)}</TableCell>
                   <TableCell>{new Date(invoice.billingDate).toLocaleDateString()}</TableCell>
                   <TableCell>Ksh{invoice.amount.toFixed(2)}</TableCell>
                   <TableCell>
@@ -83,23 +115,25 @@ export default function BillingPage() {
                       {invoice.paymentStatus}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {/* Dropdown menu with actions for each invoice. */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Send Reminder</DropdownMenuItem>
-                        <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {userRole !== 'patient' && (
+                    <TableCell>
+                      {/* Dropdown menu with actions for each invoice. */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem>View Details</DropdownMenuItem>
+                          <DropdownMenuItem>Send Reminder</DropdownMenuItem>
+                          <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

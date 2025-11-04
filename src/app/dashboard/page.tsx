@@ -17,6 +17,7 @@ import {
 } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/layout/loader";
 
 /**
  * DashboardPage component to display the main dashboard.
@@ -24,7 +25,7 @@ import { Button } from "@/components/ui/button";
  */
 export default function DashboardPage() {
   // Get the current authenticated user and Firestore instance.
-  const { user } = useUser();
+  const { user, isUserLoading: isUserAuthLoading } = useUser();
   const firestore = useFirestore();
 
   // Create a memoized reference to the user's document in Firestore.
@@ -33,7 +34,7 @@ export default function DashboardPage() {
     [user, firestore]
   );
   // Fetch the user's data from Firestore.
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   const userRole = userData?.role;
 
   // Determine the display name, defaulting to email if name is not available.
@@ -52,16 +53,18 @@ export default function DashboardPage() {
     // Other roles see all appointments.
     return collection(firestore, "appointments");
   }, [firestore, user, userRole]);
-  const { data: appointments } = useCollection(appointmentsQuery);
+  const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
+  const canQueryPatients = userRole && userRole !== 'patient';
   const patientsQuery = useMemoFirebase(
-    () => (firestore && userRole && userRole !== 'patient' ? collection(firestore, "patients") : null),
-    [firestore, userRole]
+    () => (firestore && canQueryPatients ? collection(firestore, "patients") : null),
+    [firestore, canQueryPatients]
   );
-  const { data: patients } = useCollection(patientsQuery);
+  const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
+  const canQueryBillings = userRole === 'receptionist' || userRole === 'admin' || userRole === 'patient';
   const billingsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !userRole) return null;
+    if (!firestore || !user || !canQueryBillings) return null;
     if (userRole === 'patient') {
       // Patients should only query for their own billing records.
       return query(
@@ -70,12 +73,9 @@ export default function DashboardPage() {
       );
     }
     // Receptionists and Admins can see all billing records.
-    if (userRole === 'receptionist' || userRole === 'admin') {
-      return collection(firestore, "billings");
-    }
-    return null; // Doctors and others shouldn't query billings on the dashboard.
-  }, [firestore, user, userRole]);
-  const { data: billings } = useCollection(billingsQuery);
+    return collection(firestore, "billings");
+  }, [firestore, user, userRole, canQueryBillings]);
+  const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);
 
 
   // Calculate total payments processed for non-patient roles.
@@ -83,6 +83,12 @@ export default function DashboardPage() {
     billings
       ?.filter((billing: any) => billing.paymentStatus === "paid")
       .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
+      
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || patientsLoading || billingsLoading;
+
+  if (pageIsLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -109,7 +115,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {userRole !== 'patient' && (
+        {(userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') && (
           <>
             <Card>
               <CardHeader>
@@ -121,19 +127,21 @@ export default function DashboardPage() {
                 <p className="text-4xl font-bold">{patients?.length || 0}</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base font-normal text-muted-foreground">
-                  Payments Processed
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-4xl font-bold">
-                  Ksh{totalPayments.toLocaleString()}
-                </p>
-              </CardContent>
-            </Card>
           </>
+        )}
+        {(userRole === 'admin' || userRole === 'receptionist') && (
+             <Card>
+             <CardHeader>
+               <CardTitle className="text-base font-normal text-muted-foreground">
+                 Payments Processed
+               </CardTitle>
+             </CardHeader>
+             <CardContent>
+               <p className="text-4xl font-bold">
+                 Ksh{totalPayments.toLocaleString()}
+               </p>
+             </CardContent>
+           </Card>
         )}
       </div>
 

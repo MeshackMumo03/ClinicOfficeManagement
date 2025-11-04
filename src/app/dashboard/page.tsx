@@ -40,7 +40,7 @@ export default function DashboardPage() {
   // Determine the display name, defaulting to email if name is not available.
   const displayName = userData?.name || user?.email || "User";
 
-  // Fetch data from Firestore based on the user's role.
+  // Fetch appointments from Firestore based on the user's role.
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !userRole) return null;
     if (userRole === "patient") {
@@ -55,13 +55,15 @@ export default function DashboardPage() {
   }, [firestore, user, userRole]);
   const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
-  const canQueryPatients = userRole && userRole !== 'patient';
+  // Fetch patients only if the user has a role that is allowed to see them.
+  const canQueryPatients = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
   const patientsQuery = useMemoFirebase(
     () => (firestore && canQueryPatients ? collection(firestore, "patients") : null),
     [firestore, canQueryPatients]
   );
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
+  // Fetch billings only if the user has a role that is allowed to see them.
   const canQueryBillings = userRole === 'receptionist' || userRole === 'admin' || userRole === 'patient';
   const billingsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !canQueryBillings) return null;

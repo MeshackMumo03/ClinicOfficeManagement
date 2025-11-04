@@ -87,7 +87,8 @@ service cloud.firestore {
      */
     match /doctors/{doctorId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin() || (isDoctor() && isOwner(doctorId));
+      allow update, delete: if isAdmin();
     }
 
     /**

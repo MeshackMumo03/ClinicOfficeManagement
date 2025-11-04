@@ -1,3 +1,4 @@
+
 "use client";
 // Import necessary components from ShadCN and Lucide-React.
 import {
@@ -36,39 +37,60 @@ export default function BillingPage() {
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   const userRole = userData?.role;
+  const canViewAllBillings = userRole === 'admin' || userRole === 'receptionist';
 
   const billingsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !userRole) return null;
+
+    const billingsCollection = collection(firestore, "billings");
+    
     if (userRole === "patient") {
-      return query(collection(firestore, "billings"), where("patientId", "==", user.uid));
+      return query(billingsCollection, where("patientId", "==", user.uid));
     }
-    // For admin/receptionist, get all billings
-    return collection(firestore, "billings");
-  }, [firestore, user, userRole]);
+    
+    if (canViewAllBillings) {
+      return billingsCollection;
+    }
+
+    // For doctors or other roles who can't see billings.
+    return null; 
+  }, [firestore, user, userRole, canViewAllBillings]);
 
   const { data: invoices, isLoading: billingsLoading } = useCollection(billingsQuery);
 
   const patientsQuery = useMemoFirebase(
-    () => (firestore && userRole !== 'patient' ? collection(firestore, "patients") : null),
-    [firestore, userRole]
+    () => (firestore && canViewAllBillings ? collection(firestore, "patients") : null),
+    [firestore, canViewAllBillings]
   );
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
   const getPatientName = (patientId: string) => {
-    if (patients) {
-        const patient = patients.find(p => p.id === patientId);
-        return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
-    }
     if (userRole === 'patient' && userData?.name) {
       return userData.name;
+    }
+     if (patients) {
+        const patient = patients.find(p => p.id === patientId);
+        return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
     }
     return "Loading...";
   }
 
-  const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (userRole !== 'patient' && patientsLoading);
+  const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canViewAllBillings && patientsLoading);
 
   if (pageIsLoading) {
     return <Loader />;
+  }
+
+  // Handle case for roles that shouldn't see any billing info.
+  if (!canViewAllBillings && userRole !== 'patient') {
+    return (
+      <div>
+        <h1 className="font-headline text-3xl md:text-4xl">Billing</h1>
+        <p className="text-muted-foreground mt-4">
+          You do not have permission to view billing information.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -88,7 +110,7 @@ export default function BillingPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Invoice ID</TableHead>
-                <TableHead>Patient</TableHead>
+                {canViewAllBillings && <TableHead>Patient</TableHead>}
                 <TableHead>Date</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
@@ -101,10 +123,10 @@ export default function BillingPage() {
             </TableHeader>
             <TableBody>
               {/* Map through invoices to create a table row for each invoice. */}
-              {invoices && invoices.map((invoice) => (
+              {invoices && invoices.length > 0 ? invoices.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium">{invoice.id}</TableCell>
-                  <TableCell>{getPatientName(invoice.patientId)}</TableCell>
+                  {canViewAllBillings && <TableCell>{getPatientName(invoice.patientId)}</TableCell>}
                   <TableCell>{new Date(invoice.billingDate).toLocaleDateString()}</TableCell>
                   <TableCell>Ksh{invoice.amount.toFixed(2)}</TableCell>
                   <TableCell>
@@ -135,7 +157,13 @@ export default function BillingPage() {
                     </TableCell>
                   )}
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                    <TableCell colSpan={canViewAllBillings ? 6 : 4} className="text-center">
+                        No billing records found.
+                    </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

@@ -49,12 +49,11 @@ export default function DashboardPage() {
       return query(appointmentsCollection, where("patientId", "==", user.uid));
     }
     
-    // For admin, doctor, receptionist, fetch all appointments.
     if (canViewAllAppointments) {
         return appointmentsCollection;
     }
 
-    return null; // Don't query if role is not determined yet
+    return null; 
   }, [firestore, user, userRole, canViewAllAppointments]);
 
   const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
@@ -67,7 +66,7 @@ export default function DashboardPage() {
   );
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
-  // 3. Billings
+  // 3. Billings (Role-Aware)
   const canQueryAllBillings = userRole === 'admin' || userRole === 'receptionist';
   const billingsQuery = useMemoFirebase(() => {
       if (!firestore || !user || !userRole) return null;
@@ -78,13 +77,14 @@ export default function DashboardPage() {
           return query(billingsCollection, where("patientId", "==", user.uid));
       }
       
-      // For admin or receptionist, fetch all billings.
       if (canQueryAllBillings) {
         return billingsCollection;
       }
       
+      // For doctors who cannot see all billings, this will be null
       return null;
   }, [firestore, user, userRole, canQueryAllBillings]);
+  
   const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);
 
   // --- Calculations ---
@@ -94,7 +94,7 @@ export default function DashboardPage() {
       ?.filter((billing: any) => billing.paymentStatus === "paid")
       .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
       
-  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || (canQueryPatients && patientsLoading) || billingsLoading;
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || (canQueryPatients && patientsLoading) || (canQueryAllBillings && billingsLoading);
 
   if (pageIsLoading) {
     return <Loader />;
@@ -138,7 +138,7 @@ export default function DashboardPage() {
           </Card>
         )}
         
-        {(userRole === 'admin' || userRole === 'receptionist') && (
+        {(canQueryAllBillings) && (
              <Card>
              <CardHeader>
                <CardTitle className="text-base font-normal text-muted-foreground">

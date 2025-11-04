@@ -128,7 +128,11 @@ export default function SignupPage() {
         description: "Your account has been created.",
       });
 
-      router.push("/dashboard");
+      if (selectedRole === 'admin') {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -163,7 +167,11 @@ export default function SignupPage() {
 
       setDocumentNonBlocking(userDocRef, userData, { merge: true });
 
-      router.push("/dashboard");
+      if (role === 'admin') {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -240,6 +248,7 @@ export default function SignupPage() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="doctor">Doctor</SelectItem>
                   <SelectItem value="patient">Patient</SelectItem>
                   <SelectItem value="receptionist">Receptionist</SelectItem>

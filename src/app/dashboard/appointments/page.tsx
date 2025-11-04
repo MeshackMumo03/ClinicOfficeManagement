@@ -41,23 +41,24 @@ export default function AppointmentsPage() {
     const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
     const userRole = userData?.role;
     
-    const canViewAllAppointments = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
-
+    // Role-aware query for appointments.
     const appointmentsQuery = useMemoFirebase(() => {
       if (!firestore || !user || !userRole) return null;
       
       const appointmentsCollection = collection(firestore, "appointments");
 
       if (userRole === "patient") {
+        // Patients can only see their own appointments.
         return query(appointmentsCollection, where("patientId", "==", user.uid));
       }
 
-      if (canViewAllAppointments) {
+      if (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') {
+        // Staff can see all appointments.
         return appointmentsCollection;
       }
 
-      return null;
-    }, [firestore, user, userRole, canViewAllAppointments]);
+      return null; // For roles with no access.
+    }, [firestore, user, userRole]);
 
     const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 

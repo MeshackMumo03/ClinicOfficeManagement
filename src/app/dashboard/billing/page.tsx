@@ -37,26 +37,29 @@ export default function BillingPage() {
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   const userRole = userData?.role;
-  const canViewAllBillings = userRole === 'admin' || userRole === 'receptionist';
-
+  
+  // Role-aware query for billings.
   const billingsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !userRole) return null;
 
     const billingsCollection = collection(firestore, "billings");
     
     if (userRole === "patient") {
+      // Patients can only see their own billings.
       return query(billingsCollection, where("patientId", "==", user.uid));
     }
     
-    if (canViewAllBillings) {
+    if (userRole === 'admin' || userRole === 'receptionist') {
+      // Staff can see all billings.
       return billingsCollection;
     }
 
-    // For doctors or other roles who can't see billings.
-    return null; 
-  }, [firestore, user, userRole, canViewAllBillings]);
+    return null; // For roles like doctors who can't see billings.
+  }, [firestore, user, userRole]);
 
   const { data: invoices, isLoading: billingsLoading } = useCollection(billingsQuery);
+
+  const canViewAllBillings = userRole === 'admin' || userRole === 'receptionist';
 
   const patientsQuery = useMemoFirebase(
     () => (firestore && canViewAllBillings ? collection(firestore, "patients") : null),
@@ -81,7 +84,7 @@ export default function BillingPage() {
     return <Loader />;
   }
 
-  // Handle case for roles that shouldn't see any billing info.
+  // Handle case for roles that shouldn't see any billing info (e.g., doctors).
   if (!canViewAllBillings && userRole !== 'patient') {
     return (
       <div>

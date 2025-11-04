@@ -37,68 +37,65 @@ export default function DashboardPage() {
 
   // --- Role-Aware Data Fetching ---
 
-  const canViewAllAppointments = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
-
-  // 1. Appointments
+  // 1. Appointments Query
   const appointmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !userRole) return null;
-
+    if (!firestore || !user) return null;
     const appointmentsCollection = collection(firestore, "appointments");
 
     if (userRole === "patient") {
+      // Patients can only see their own appointments.
       return query(appointmentsCollection, where("patientId", "==", user.uid));
     }
-    
-    if (canViewAllAppointments) {
-        return appointmentsCollection;
+    if (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') {
+      // Staff can see all appointments.
+      return appointmentsCollection;
     }
-
-    return null; 
-  }, [firestore, user, userRole, canViewAllAppointments]);
+    return null; // For roles with no access or while loading role.
+  }, [firestore, user, userRole]);
 
   const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
-  // 2. Patients (only for staff)
-  const canQueryPatients = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
-  const patientsQuery = useMemoFirebase(
-    () => (firestore && canQueryPatients ? collection(firestore, "patients") : null),
-    [firestore, canQueryPatients]
-  );
+  // 2. Patients Query (only for staff)
+  const patientsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    if (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') {
+      return collection(firestore, "patients");
+    }
+    return null;
+  }, [firestore, userRole]);
+
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
-  // 3. Billings (Role-Aware)
-  const canQueryAllBillings = userRole === 'admin' || userRole === 'receptionist';
+  // 3. Billings Query (Role-Aware)
   const billingsQuery = useMemoFirebase(() => {
-      if (!firestore || !user || !userRole) return null;
+    if (!firestore || !user) return null;
+    const billingsCollection = collection(firestore, "billings");
 
-      const billingsCollection = collection(firestore, "billings");
-
-      if (userRole === "patient") {
-          return query(billingsCollection, where("patientId", "==", user.uid));
-      }
-      
-      if (canQueryAllBillings) {
-        return billingsCollection;
-      }
-      
-      // For doctors who cannot see all billings, this will be null
-      return null;
-  }, [firestore, user, userRole, canQueryAllBillings]);
+    if (userRole === "patient") {
+      // Patients can only see their own billings.
+      return query(billingsCollection, where("patientId", "==", user.uid));
+    }
+    if (userRole === 'admin' || userRole === 'receptionist') {
+      // Receptionists and Admins can see all billings.
+      return billingsCollection;
+    }
+    return null; // Doctors can't see billings, so query is null.
+  }, [firestore, user, userRole]);
   
   const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);
 
-  // --- Calculations ---
-
-  const totalPayments =
-    billings
-      ?.filter((billing: any) => billing.paymentStatus === "paid")
-      .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
-      
-  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || (canQueryPatients && patientsLoading) || (canQueryAllBillings && billingsLoading);
+  // --- Loading State and Calculations ---
+  
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || (userRole && (appointmentsLoading || patientsLoading || billingsLoading));
 
   if (pageIsLoading) {
     return <Loader />;
   }
+  
+  const totalPayments =
+    billings
+      ?.filter((billing: any) => billing.paymentStatus === "paid")
+      .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -125,7 +122,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {canQueryPatients && (
+        {(userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-normal text-muted-foreground">
@@ -138,7 +135,7 @@ export default function DashboardPage() {
           </Card>
         )}
         
-        {(canQueryAllBillings) && (
+        {(userRole === 'admin' || userRole === 'receptionist') && (
              <Card>
              <CardHeader>
                <CardTitle className="text-base font-normal text-muted-foreground">

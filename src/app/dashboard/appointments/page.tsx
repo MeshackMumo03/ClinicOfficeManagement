@@ -40,16 +40,24 @@ export default function AppointmentsPage() {
     );
     const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
     const userRole = userData?.role;
+    
+    const canViewAllAppointments = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
 
     const appointmentsQuery = useMemoFirebase(() => {
       if (!firestore || !user || !userRole) return null;
       
+      const appointmentsCollection = collection(firestore, "appointments");
+
       if (userRole === "patient") {
-        return query(collection(firestore, "appointments"), where("patientId", "==", user.uid));
+        return query(appointmentsCollection, where("patientId", "==", user.uid));
       }
-      // For other roles (doctor, admin, receptionist), fetch all appointments
-      return collection(firestore, "appointments");
-    }, [firestore, user, userRole]);
+
+      if (canViewAllAppointments) {
+        return appointmentsCollection;
+      }
+
+      return null;
+    }, [firestore, user, userRole, canViewAllAppointments]);
 
     const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 

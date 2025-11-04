@@ -37,19 +37,26 @@ export default function DashboardPage() {
 
   // --- Role-Aware Data Fetching ---
 
+  const canViewAllAppointments = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
+
   // 1. Appointments
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !userRole) return null;
 
+    const appointmentsCollection = collection(firestore, "appointments");
+
     if (userRole === "patient") {
-      return query(
-        collection(firestore, "appointments"),
-        where("patientId", "==", user.uid)
-      );
+      return query(appointmentsCollection, where("patientId", "==", user.uid));
     }
+    
     // For admin, doctor, receptionist, fetch all appointments.
-    return collection(firestore, "appointments");
-  }, [firestore, user, userRole]);
+    if (canViewAllAppointments) {
+        return appointmentsCollection;
+    }
+
+    return null; // Don't query if role is not determined yet
+  }, [firestore, user, userRole, canViewAllAppointments]);
+
   const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
   // 2. Patients (only for staff)
@@ -61,20 +68,23 @@ export default function DashboardPage() {
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
   // 3. Billings
-  const canQueryBillings = userRole === 'admin' || userRole === 'receptionist' || userRole === 'patient';
+  const canQueryAllBillings = userRole === 'admin' || userRole === 'receptionist';
   const billingsQuery = useMemoFirebase(() => {
-      if (!firestore || !user || !canQueryBillings) return null;
+      if (!firestore || !user || !userRole) return null;
+
+      const billingsCollection = collection(firestore, "billings");
 
       if (userRole === "patient") {
-          return query(
-              collection(firestore, "billings"),
-              where("patientId", "==", user.uid)
-          );
+          return query(billingsCollection, where("patientId", "==", user.uid));
       }
       
       // For admin or receptionist, fetch all billings.
-      return collection(firestore, "billings");
-  }, [firestore, user, userRole, canQueryBillings]);
+      if (canQueryAllBillings) {
+        return billingsCollection;
+      }
+      
+      return null;
+  }, [firestore, user, userRole, canQueryAllBillings]);
   const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);
 
   // --- Calculations ---

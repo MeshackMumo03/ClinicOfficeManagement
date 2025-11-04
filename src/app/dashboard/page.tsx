@@ -84,7 +84,7 @@ export default function DashboardPage() {
       ?.filter((billing: any) => billing.paymentStatus === "paid")
       .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
       
-  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || patientsLoading || billingsLoading;
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || (canQueryPatients && patientsLoading) || billingsLoading;
 
   if (pageIsLoading) {
     return <Loader />;

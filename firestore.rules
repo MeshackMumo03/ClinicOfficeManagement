@@ -93,9 +93,8 @@ service cloud.firestore {
      * @path /appointments/{appointmentId}
      */
     match /appointments/{appointmentId} {
-      // Patients can see their own appointments. Doctors, receptionists, and admins can see all.
       allow get: if (isPatient() && resource.data.patientId == request.auth.uid) || isDoctor() || isReceptionist() || isAdmin();
-      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      allow list: if (isPatient() && request.query.where.patientId == request.auth.uid) || isDoctor() || isReceptionist() || isAdmin();
       allow create, update, delete: if isDoctor() || isReceptionist() || isAdmin();
     }
 
@@ -125,7 +124,7 @@ service cloud.firestore {
      */
     match /billings/{billingId} {
       allow get: if (isPatient() && resource.data.patientId == request.auth.uid) || isReceptionist() || isAdmin();
-      allow list: if isReceptionist() || isAdmin();
+      allow list: if (isPatient() && request.query.where.patientId == request.auth.uid) || isReceptionist() || isAdmin();
       allow create, update, delete: if isReceptionist() || isAdmin();
     }
 

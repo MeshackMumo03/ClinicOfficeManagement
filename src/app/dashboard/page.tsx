@@ -41,7 +41,7 @@ export default function DashboardPage() {
 
   // Fetch data from Firestore based on the user's role.
   const appointmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !userRole) return null;
     if (userRole === "patient") {
       // Patients only see their own appointments.
       return query(
@@ -61,7 +61,7 @@ export default function DashboardPage() {
   const { data: patients } = useCollection(patientsQuery);
 
   const billingsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !userRole) return null;
     if (userRole === 'patient') {
       // Patients should only query for their own billing records.
       return query(
@@ -81,7 +81,7 @@ export default function DashboardPage() {
   // Calculate total payments processed for non-patient roles.
   const totalPayments =
     billings
-      ?.filter((billing: any) => billing.paymentStatus === "Paid")
+      ?.filter((billing: any) => billing.paymentStatus === "paid")
       .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
 
   return (

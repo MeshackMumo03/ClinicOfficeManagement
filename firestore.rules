@@ -89,12 +89,12 @@ service cloud.firestore {
     }
 
     /**
-     * @description Appointments are visible to relevant parties.
+     * @description Appointments are visible to relevant parties. Patients can now list all appointments.
      * @path /appointments/{appointmentId}
      */
     match /appointments/{appointmentId} {
       allow get: if (isPatient() && resource.data.patientId == request.auth.uid) || isDoctor() || isReceptionist() || isAdmin();
-      allow list: if (isPatient() && request.query.where[0][2] == request.auth.uid) || isDoctor() || isReceptionist() || isAdmin();
+      allow list: if isPatient() || isDoctor() || isReceptionist() || isAdmin();
       allow create, update, delete: if isDoctor() || isReceptionist() || isAdmin();
     }
 
@@ -119,12 +119,12 @@ service cloud.firestore {
     }
 
     /**
-     * @description Billing info accessible by receptionists, admins, and the specific patient.
+     * @description Billing info accessible by receptionists, admins, and the specific patient. Patients can now list all billings.
      * @path /billings/{billingId}
      */
     match /billings/{billingId} {
       allow get: if (isPatient() && resource.data.patientId == request.auth.uid) || isReceptionist() || isAdmin();
-      allow list: if (isPatient() && request.query.where[0][2] == request.auth.uid) || isReceptionist() || isAdmin();
+      allow list: if isPatient() || isReceptionist() || isAdmin();
       allow create, update, delete: if isReceptionist() || isAdmin();
     }
 

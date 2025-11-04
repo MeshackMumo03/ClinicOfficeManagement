@@ -75,6 +75,7 @@ export default function DashboardPage() {
     if (userRole === 'admin' || userRole === 'receptionist') {
       return billingsCollection;
     }
+    // Doctors do not have permission to view billings.
     return null;
   }, [firestore, user, userRole]);
   
@@ -82,7 +83,7 @@ export default function DashboardPage() {
 
   // --- Loading State and Calculations ---
   
-  const pageIsLoading = isUserAuthLoading || isUserDataLoading || (userRole && (appointmentsLoading || (patientsLoading && (userRole !== 'patient')) || (billingsLoading && (userRole !== 'doctor'))));
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || (userRole && (appointmentsLoading || (patientsLoading && (userRole !== 'patient')) || (billingsLoading && userRole !== 'doctor')));
 
   if (pageIsLoading) {
     return <Loader />;
@@ -131,11 +132,11 @@ export default function DashboardPage() {
           </Card>
         )}
         
-        {(userRole === 'admin' || userRole === 'receptionist') && (
+        {(userRole === 'admin' || userRole === 'receptionist' || userRole === 'patient') && (
              <Card>
              <CardHeader>
                <CardTitle className="text-base font-normal text-muted-foreground">
-                 Payments Processed
+                 {userRole === 'patient' ? "Total Paid" : "Payments Processed"}
                </CardTitle>
              </CardHeader>
              <CardContent>
@@ -144,21 +145,6 @@ export default function DashboardPage() {
                </p>
              </CardContent>
            </Card>
-        )}
-
-        {userRole === 'patient' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-normal text-muted-foreground">
-                Total Paid
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold">
-                Ksh{totalPayments.toLocaleString()}
-              </p>
-            </CardContent>
-          </Card>
         )}
       </div>
 

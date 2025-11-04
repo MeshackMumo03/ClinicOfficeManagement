@@ -62,24 +62,32 @@ export default function BillingPage() {
 
   const canViewAllBillings = userRole === 'admin' || userRole === 'receptionist';
 
-  const patientsQuery = useMemoFirebase(
-    () => (firestore && canViewAllBillings ? collection(firestore, "patients") : null),
-    [firestore, canViewAllBillings]
-  );
+  // Fetch patient data only if needed to resolve names
+  const patientsQuery = useMemoFirebase(() => {
+    if (!firestore || !canViewAllBillings) return null;
+    return collection(firestore, "patients");
+  }, [firestore, canViewAllBillings]);
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
+  // Fetch the patient's own name if they are a patient
+  const singlePatientDocRef = useMemoFirebase(() => {
+    if (!firestore || !user || userRole !== 'patient') return null;
+    return doc(firestore, 'patients', user.uid);
+  }, [firestore, user, userRole]);
+  const { data: singlePatient, isLoading: singlePatientLoading } = useDoc(singlePatientDocRef);
+
   const getPatientName = (patientId: string) => {
-    if (userRole === 'patient' && userData?.name) {
-      return userData.name;
-    }
-     if (patients) {
-        const patient = patients.find(p => p.id === patientId);
-        return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
-    }
-    return "Loading...";
+      if (userRole === 'patient' && singlePatient) {
+          return `${singlePatient.firstName} ${singlePatient.lastName}`;
+      }
+      if (patients) {
+          const patient = patients.find(p => p.id === patientId);
+          return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
+      }
+      return "Loading...";
   }
 
-  const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canViewAllBillings && patientsLoading);
+  const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canViewAllBillings && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
 
   if (pageIsLoading) {
     return <Loader />;

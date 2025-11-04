@@ -43,6 +43,7 @@ export default function AppointmentsPage() {
 
     const appointmentsQuery = useMemoFirebase(() => {
       if (!firestore || !user || !userRole) return null;
+      
       if (userRole === "patient") {
         return query(collection(firestore, "appointments"), where("patientId", "==", user.uid));
       }
@@ -70,6 +71,7 @@ export default function AppointmentsPage() {
     // If the user is a patient, fetch only their own document for name display.
     const singlePatientDocRef = useMemoFirebase(() => {
         if (!firestore || !user || userRole !== 'patient') return null;
+        // The patient document ID in /patients is the same as the user UID
         return doc(firestore, 'patients', user.uid);
     }, [firestore, user, userRole]);
     const { data: singlePatient, isLoading: singlePatientLoading } = useDoc(singlePatientDocRef);
@@ -224,5 +226,3 @@ export default function AppointmentsPage() {
     </div>
   );
 }
-
-    

@@ -35,21 +35,24 @@ export default function DashboardPage() {
   const userRole = userData?.role;
   const displayName = userData?.name || user?.email || "User";
 
-  // Role-aware query for appointments
+  // --- Role-Aware Data Fetching ---
+
+  // 1. Appointments
   const appointmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !userRole) return null;
+
     if (userRole === "patient") {
       return query(
         collection(firestore, "appointments"),
         where("patientId", "==", user.uid)
       );
     }
-    // For admin, doctor, receptionist
+    // For admin, doctor, receptionist, fetch all appointments.
     return collection(firestore, "appointments");
   }, [firestore, user, userRole]);
   const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
-  // Fetch patients ONLY for staff roles
+  // 2. Patients (only for staff)
   const canQueryPatients = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
   const patientsQuery = useMemoFirebase(
     () => (firestore && canQueryPatients ? collection(firestore, "patients") : null),
@@ -57,23 +60,25 @@ export default function DashboardPage() {
   );
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
-  // Role-aware query for billings
+  // 3. Billings
+  const canQueryBillings = userRole === 'admin' || userRole === 'receptionist' || userRole === 'patient';
   const billingsQuery = useMemoFirebase(() => {
-      if (!firestore || !user || !userRole) return null;
+      if (!firestore || !user || !canQueryBillings) return null;
+
       if (userRole === "patient") {
           return query(
               collection(firestore, "billings"),
               where("patientId", "==", user.uid)
           );
       }
-      if (userRole === 'admin' || userRole === 'receptionist') {
-          return collection(firestore, "billings");
-      }
-      return null; // Doctors don't see billing info on the dashboard
-  }, [firestore, user, userRole]);
+      
+      // For admin or receptionist, fetch all billings.
+      return collection(firestore, "billings");
+  }, [firestore, user, userRole, canQueryBillings]);
   const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);
 
-  // Calculate total payments processed. This is safe because `billings` will be null for roles without permission.
+  // --- Calculations ---
+
   const totalPayments =
     billings
       ?.filter((billing: any) => billing.paymentStatus === "paid")
@@ -111,19 +116,18 @@ export default function DashboardPage() {
         </Card>
 
         {canQueryPatients && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base font-normal text-muted-foreground">
-                  New Patients Registered
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-4xl font-bold">{patients?.length || 0}</p>
-              </CardContent>
-            </Card>
-          </>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-normal text-muted-foreground">
+                New Patients Registered
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold">{patients?.length || 0}</p>
+            </CardContent>
+          </Card>
         )}
+        
         {(userRole === 'admin' || userRole === 'receptionist') && (
              <Card>
              <CardHeader>

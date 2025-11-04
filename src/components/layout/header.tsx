@@ -68,12 +68,12 @@ export function Header() {
   );
   // Fetch user data from Firestore.
   const { data: userData } = useDoc(userDocRef);
-  const userRole = userData?.role || "patient";
+  const userRole = userData?.role;
 
   // Filter navigation links based on user role
   const navLinks = userRole === 'admin'
     ? allNavLinks
-    : allNavLinks.filter(link => link.roles.includes(userRole));
+    : allNavLinks.filter(link => userRole && link.roles.includes(userRole));
 
   // Determine display name and avatar fallback.
   const displayName = userData?.name || user?.email || "User";
@@ -95,14 +95,14 @@ export function Header() {
     doctor: 'bg-role-doctor',
     receptionist: 'bg-role-receptionist',
     patient: 'bg-role-patient',
-  }[userRole] || 'bg-primary';
+  }[userRole || ''] || 'bg-primary';
 
   const roleColorClass = {
     admin: 'bg-role-admin',
     doctor: 'bg-role-doctor',
     receptionist: 'bg-role-receptionist',
     patient: 'bg-role-patient',
-  }[userRole] || 'bg-primary';
+  }[userRole || ''] || 'bg-primary';
 
   return (
     <header className="sticky top-0 z-40 flex h-20 flex-col items-center gap-4 border-b bg-background px-6">
@@ -160,7 +160,7 @@ export function Header() {
                   </Avatar>
                    <div className="flex flex-col items-start">
                         <span className="font-medium text-sm">{displayName}</span>
-                        <Badge className={cn("text-xs capitalize -ml-0.5", roleColorClass)}>{userRole}</Badge>
+                        {userRole && <Badge className={cn("text-xs capitalize -ml-0.5", roleColorClass)}>{userRole}</Badge>}
                     </div>
                   </Button>
               </DropdownMenuTrigger>

@@ -39,25 +39,23 @@ export default function DashboardPage() {
 
   // 1. Appointments Query
   const appointmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !userRole) return null;
     const appointmentsCollection = collection(firestore, "appointments");
 
     if (userRole === "patient") {
-      // Patients can only see their own appointments.
       return query(appointmentsCollection, where("patientId", "==", user.uid));
     }
     if (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') {
-      // Staff can see all appointments.
       return appointmentsCollection;
     }
-    return null; // For roles with no access or while loading role.
+    return null;
   }, [firestore, user, userRole]);
 
   const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
   // 2. Patients Query (only for staff)
   const patientsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !userRole) return null;
     if (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') {
       return collection(firestore, "patients");
     }
@@ -68,18 +66,16 @@ export default function DashboardPage() {
 
   // 3. Billings Query (Role-Aware)
   const billingsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !userRole) return null;
     const billingsCollection = collection(firestore, "billings");
 
     if (userRole === "patient") {
-      // Patients can only see their own billings.
       return query(billingsCollection, where("patientId", "==", user.uid));
     }
     if (userRole === 'admin' || userRole === 'receptionist') {
-      // Receptionists and Admins can see all billings.
       return billingsCollection;
     }
-    return null; // Doctors can't see billings, so query is null.
+    return null;
   }, [firestore, user, userRole]);
   
   const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);

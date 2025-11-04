@@ -126,7 +126,7 @@ export default function BillingPage() {
             </TableHeader>
             <TableBody>
               {/* Map through invoices to create a table row for each invoice. */}
-              {invoices && invoices.length > 0 ? invoices.map((invoice) => (
+              {invoices && invoices.length > 0 ? invoices.map((invoice: any) => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium">{invoice.id}</TableCell>
                   {canViewAllBillings && <TableCell>{getPatientName(invoice.patientId)}</TableCell>}

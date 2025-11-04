@@ -3,7 +3,7 @@
  * @file Firebase Security Rules for Clinic Management System
  *
  * @corePhilosophy This ruleset enforces a strict user-ownership model for personal data,
- *   and role-based access for administrative data.  It prioritizes security and
+ *   and role-based access for administrative data. It prioritizes security and
  *   simplicity for rapid prototyping and iteration, with minimal data validation.
  *
  * @dataStructure
@@ -17,7 +17,7 @@
  *   - /users/{userId}/documents/{documentId}: Stores documents uploaded by patients, nested under the user's ID.
  *
  * @keySecurityDecisions
- *   - User listing is disallowed to protect privacy.
+ *   - User listing is disallowed for non-admins to protect privacy.
  *   - Data validation is minimized to focus on authorization during prototyping.
  *   - Helper functions like isDoctor() centralize role checks for maintainability.
  *
@@ -67,7 +67,7 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isSignedIn() && isOwner(userId);
       allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if false; // Prevent client-side deletion
+      allow delete: if isAdmin(); // Admins can delete users
     }
 
     /**
@@ -78,7 +78,7 @@ service cloud.firestore {
     match /patients/{patientId} {
       allow get: if (isPatient() && isOwner(patientId)) || isDoctor() || isReceptionist() || isAdmin();
       allow list: if isDoctor() || isReceptionist() || isAdmin();
-      allow create, update, delete: if isDoctor() || isReceptionist() || isAdmin();
+      allow create, update, delete: if isAdmin() || isDoctor() || isReceptionist();
     }
 
     /**
@@ -91,7 +91,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Appointments are visible to relevant parties. Patients can now list all appointments.
+     * @description Appointments are visible to relevant parties.
      * @path /appointments/{appointmentId}
      */
     match /appointments/{appointmentId} {
@@ -121,7 +121,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Billing info accessible by receptionists, admins, and the specific patient. Patients can now list all billings.
+     * @description Billing info accessible by receptionists, admins, and the specific patient.
      * @path /billings/{billingId}
      */
     match /billings/{billingId} {
@@ -138,10 +138,10 @@ service cloud.firestore {
       function isExistingOwner(userId) {
         return isSignedIn() && isOwner(userId) && resource != null;
       }
-      allow get, list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.patientId == userId;
-      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.patientId == resource.data.patientId;
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow get, list: if isSignedIn() && isOwner(userId) || isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.patientId == userId || isAdmin();
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.patientId == resource.data.patientId || isAdmin();
+      allow delete: if isSignedIn() && isExistingOwner(userId) || isAdmin();
     }
   }
 }

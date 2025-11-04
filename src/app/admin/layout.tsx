@@ -23,6 +23,7 @@ export default function AdminLayout({
   const firestore = useFirestore();
   const router = useRouter();
 
+  // Memoize the document reference to prevent re-creation on every render.
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
@@ -30,17 +31,29 @@ export default function AdminLayout({
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
   useEffect(() => {
+    // If auth is done loading and there's no user, redirect to login.
     if (!isUserLoading && !user) {
       router.push('/login');
-    } else if (!isUserDataLoading && userData?.role !== 'admin') {
+      return;
+    }
+    // If user data is done loading and the user is not an admin, redirect away.
+    if (!isUserDataLoading && userData && userData.role !== 'admin') {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, userData, isUserDataLoading, router]);
 
-  if (isUserLoading || isUserDataLoading || !user || userData?.role !== 'admin') {
+  // Show a loader while authentication or user data fetching is in progress.
+  // Also wait if we have a user but haven't confirmed their role yet.
+  if (isUserLoading || isUserDataLoading || !user) {
     return <Loader />;
   }
 
+  // If the user is confirmed not to be an admin, show a loader while redirecting.
+  if (userData?.role !== 'admin') {
+    return <Loader />;
+  }
+
+  // Once confirmed as an admin, render the layout.
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Header />

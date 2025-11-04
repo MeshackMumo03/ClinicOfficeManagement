@@ -71,9 +71,7 @@ export function Header() {
   const userRole = userData?.role;
 
   // Filter navigation links based on user role. Admin sees all links.
-  const navLinks = userRole === 'admin'
-    ? allNavLinks
-    : allNavLinks.filter(link => userRole && link.roles.includes(userRole));
+  const navLinks = allNavLinks.filter(link => userRole && link.roles.includes(userRole));
 
   // Determine display name and avatar fallback.
   const displayName = userData?.name || user?.email || "User";
@@ -90,12 +88,12 @@ export function Header() {
     }
   };
 
-  const roleColorClass = {
+  const roleColorClass = userRole ? {
     admin: 'bg-role-admin',
     doctor: 'bg-role-doctor',
     receptionist: 'bg-role-receptionist',
     patient: 'bg-role-patient',
-  }[userRole] || 'bg-primary';
+  }[userRole] : 'bg-primary';
 
   return (
     <header className="sticky top-0 z-40 flex h-20 flex-col items-center gap-4 border-b bg-background px-6">

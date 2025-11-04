@@ -1,3 +1,4 @@
+
 "use client";
 
 // Import React and necessary components from ShadCN and Lucide-React.
@@ -20,8 +21,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
 import { PlusCircle, ListFilter } from "lucide-react";
 import { Loader } from "@/components/layout/loader";
 
@@ -31,11 +32,27 @@ import { Loader } from "@/components/layout/loader";
  */
 export default function AppointmentsPage() {
     const firestore = useFirestore();
+    const { user, isUserLoading } = useUser();
 
-    const appointmentsQuery = useMemoFirebase(
-      () => (firestore ? collection(firestore, "appointments") : null),
-      [firestore]
+    const userDocRef = useMemoFirebase(
+      () => (user ? doc(firestore, "users", user.uid) : null),
+      [user, firestore]
     );
+    const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+    const userRole = userData?.role;
+
+    const appointmentsQuery = useMemoFirebase(() => {
+      if (!firestore || !user) return null;
+      if (userRole === "patient") {
+        return query(collection(firestore, "appointments"), where("patientId", "==", user.uid));
+      }
+      // For other roles (doctor, admin, receptionist), fetch all appointments
+      if (userRole) {
+        return collection(firestore, "appointments");
+      }
+      return null;
+    }, [firestore, user, userRole]);
+
     const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
     const doctorsQuery = useMemoFirebase(
@@ -43,11 +60,27 @@ export default function AppointmentsPage() {
       [firestore]
     );
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
+
+    const patientsQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, "patients") : null),
+        [firestore]
+    );
+    const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
+
+    const getPatientName = (patientId: string) => {
+        const patient = patients?.find(p => p.id === patientId);
+        return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown Patient";
+    }
+
+    const getDoctorName = (doctorId: string) => {
+        const doctor = doctors?.find(d => d.id === doctorId);
+        return doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : "Unknown Doctor";
+    }
     
     // Get unique statuses from appointments for the filter dropdown.
-    const statuses = appointments ? Array.from(new Set(appointments.map(a => a.status))) : [];
+    const statuses = appointments ? Array.from(new Set(appointments.map((a: any) => a.status))) : [];
 
-    if (appointmentsLoading || doctorsLoading) {
+    if (isUserLoading || isUserDataLoading || appointmentsLoading || doctorsLoading || patientsLoading) {
         return <Loader />;
     }
 
@@ -58,32 +91,36 @@ export default function AppointmentsPage() {
         <div>
           <h1 className="font-headline text-3xl md:text-4xl">Appointments</h1>
         </div>
-        <Button>
-          <PlusCircle className="mr-2" />
-          New Appointment
-        </Button>
+        {userRole !== 'patient' && (
+          <Button>
+            <PlusCircle className="mr-2" />
+            New Appointment
+          </Button>
+        )}
       </div>
 
       {/* Filter section with dropdown menus for doctor, date, and status. */}
       <div className="flex items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-                Doctor
-                <ListFilter className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>Filter by Doctor</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {/* Map through doctors to create checkbox items for the filter. */}
-            {doctors?.map((doctor) => (
-                <DropdownMenuCheckboxItem key={doctor.id}>
-                    {doctor.firstName} {doctor.lastName}
-                </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {userRole !== 'patient' && (
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                    Doctor
+                    <ListFilter className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+                <DropdownMenuLabel>Filter by Doctor</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {/* Map through doctors to create checkbox items for the filter. */}
+                {doctors?.map((doctor: any) => (
+                    <DropdownMenuCheckboxItem key={doctor.id}>
+                        {doctor.firstName} {doctor.lastName}
+                    </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+            </DropdownMenu>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -110,7 +147,7 @@ export default function AppointmentsPage() {
             <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {/* Map through statuses to create checkbox items for the filter. */}
-            {statuses.map((status) => (
+            {statuses.map((status: any) => (
                 <DropdownMenuCheckboxItem key={status}>
                     {status}
                 </DropdownMenuCheckboxItem>
@@ -133,13 +170,13 @@ export default function AppointmentsPage() {
             </TableHeader>
             <TableBody>
               {/* Map through appointments to create a table row for each appointment. */}
-              {appointments && appointments.map((appointment) => (
+              {appointments && appointments.map((appointment: any) => (
                 <TableRow key={appointment.id}>
                   <TableCell className="font-medium">
-                    {appointment.patientName}
+                    {getPatientName(appointment.patientId)}
                   </TableCell>
-                  <TableCell className="text-primary hover:underline cursor-pointer">{appointment.doctorName}</TableCell>
-                  <TableCell className="text-primary hover:underline cursor-pointer">{new Date(appointment.appointmentDateTime).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}, {new Date(appointment.appointmentDateTime).toLocaleTimeString()}</TableCell>
+                  <TableCell className="text-primary hover:underline cursor-pointer">{getDoctorName(appointment.doctorId)}</TableCell>
+                  <TableCell>{new Date(appointment.appointmentDateTime).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}, {new Date(appointment.appointmentDateTime).toLocaleTimeString()}</TableCell>
                   <TableCell>
                     {/* Display a badge with a color corresponding to the appointment status. */}
                     <Badge

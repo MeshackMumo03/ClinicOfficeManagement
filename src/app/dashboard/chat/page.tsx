@@ -4,9 +4,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, SendHorizonal } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from "@/firebase";
+import { collection, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
+import React from "react";
 
 
 /**
@@ -25,18 +26,42 @@ function getInitials(name: string) {
  */
 export default function ChatPage() {
   const firestore = useFirestore();
-  const patientsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, "patients") : null),
-    [firestore]
+  const { user, isUserLoading } = useUser();
+  const [selectedContactId, setSelectedContactId] = React.useState<string | null>(null);
+
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, "users", user.uid) : null),
+    [user, firestore]
   );
-  const { data: patients, isLoading } = useCollection(patientsQuery);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  const userRole = userData?.role;
+
+  // Role-aware query for contacts
+  const contactsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    if (userRole === 'patient') {
+      // Patients should see a list of doctors
+      return collection(firestore, "doctors");
+    } else if (userRole === 'doctor' || userRole === 'receptionist' || userRole === 'admin') {
+      // Staff should see a list of patients
+      return collection(firestore, "patients");
+    }
+    return null;
+  }, [firestore, userRole]);
+
+  const { data: contacts, isLoading: contactsLoading } = useCollection(contactsQuery);
+
+  const isLoading = isUserLoading || isUserDataLoading || contactsLoading;
 
   if (isLoading) {
     return <Loader />;
   }
 
-  const hasPatients = patients && patients.length > 0;
-  const firstPatient: any = hasPatients ? patients[0] : null;
+  const hasContacts = contacts && contacts.length > 0;
+  // Set the first contact as selected if none is chosen
+  const selectedContact = contacts?.find(c => c.id === selectedContactId) || (hasContacts ? contacts[0] : null);
+  const contactName = selectedContact ? `${selectedContact.firstName} ${selectedContact.lastName}` : "No selection";
+  const contactRole = userRole === 'patient' ? 'Doctor' : 'Patient';
 
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)]">
@@ -44,74 +69,76 @@ export default function ChatPage() {
       <div>
         <h1 className="font-headline text-3xl md:text-4xl">Messages</h1>
         <p className="text-muted-foreground">
-          Communicate with your patients securely.
+          Communicate with your {userRole === 'patient' ? 'doctors' : 'patients'} securely.
         </p>
       </div>
 
-      {/* Main chat interface with patient list and chat window. */}
+      {/* Main chat interface with contact list and chat window. */}
       <div className="mt-8 border rounded-lg flex-1 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 h-full">
         <div className="border-r flex flex-col h-full">
-            {/* Search bar for patients. */}
+            {/* Search bar for contacts. */}
             <div className="p-4 border-b">
                 <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input type="search" placeholder="Search patients..." className="pl-8" />
+                    <Input type="search" placeholder={`Search ${userRole === 'patient' ? 'doctors' : 'patients'}...`} className="pl-8" />
                 </div>
             </div>
-            {/* List of patients. */}
+            {/* List of contacts. */}
             <div className="flex-1 overflow-y-auto">
                 <nav className="grid gap-1 p-2">
-                    {hasPatients && patients.slice(0, 5).map((patient: any, index: number) => (
-                        <Button key={patient.id} variant={index === 0 ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12">
+                    {hasContacts && contacts.map((contact: any) => (
+                        <Button key={contact.id} variant={selectedContact?.id === contact.id ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => setSelectedContactId(contact.id)}>
                              <Avatar className="h-8 w-8">
-                                <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${patient.firstName.replace(/\s/g, '')}/100/100`} />
-                                <AvatarFallback>{getInitials(patient.firstName)}</AvatarFallback>
+                                <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${contact.id}/100/100`} />
+                                <AvatarFallback>{getInitials(contact.firstName)}</AvatarFallback>
                             </Avatar>
                             <div className="flex flex-col items-start">
-                                <span className="font-medium">{patient.firstName} {patient.lastName}</span>
+                                <span className="font-medium">{contact.firstName} {contact.lastName}</span>
                                 <span className="text-xs text-muted-foreground">Click to view message...</span>
                             </div>
                         </Button>
                     ))}
-                    {!hasPatients && (
-                        <p className="p-4 text-sm text-muted-foreground">No patients found.</p>
+                    {!hasContacts && (
+                        <p className="p-4 text-sm text-muted-foreground">No {userRole === 'patient' ? 'doctors' : 'patients'} found.</p>
                     )}
                 </nav>
             </div>
         </div>
         {/* Chat window section. */}
         <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full bg-muted/20">
-          {firstPatient ? (
+          {selectedContact ? (
             <>
-              {/* Header of the chat window with patient's avatar and name. */}
+              {/* Header of the chat window with contact's avatar and name. */}
               <div className="p-4 border-b flex items-center gap-4">
                   <Avatar>
-                      <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${firstPatient.firstName.replace(/\s/g, '')}/100/100`} />
-                      <AvatarFallback>{getInitials(firstPatient.firstName)}</AvatarFallback>
+                      <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${selectedContact.id}/100/100`} />
+                      <AvatarFallback>{getInitials(contactName)}</AvatarFallback>
                   </Avatar>
-                  <h2 className="font-semibold text-lg">{firstPatient.firstName} {firstPatient.lastName}</h2>
+                  <div>
+                    <h2 className="font-semibold text-lg">{contactName}</h2>
+                    <p className="text-sm text-muted-foreground">{contactRole}</p>
+                  </div>
               </div>
               {/* Message display area. */}
               <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-                  {/* Example of an outgoing message. */}
+                  {/* Example messages for demonstration */}
                   <div className="flex items-start gap-3 justify-end">
                       <div className="bg-primary text-primary-foreground p-3 rounded-lg max-w-xs">
-                          <p>Hello Dr. Smith, I have a question about my prescription.</p>
+                          <p>Hello, I have a question about my prescription.</p>
                           <p className="text-xs text-right mt-1 opacity-70">3:45 PM</p>
                       </div>
                       <Avatar>
-                          <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${firstPatient.firstName.replace(/\s/g, '')}/100/100`} />
-                          <AvatarFallback>{getInitials(firstPatient.firstName)}</AvatarFallback>
+                          <AvatarImage data-ai-hint="person face" src={user?.photoURL || `https://picsum.photos/seed/${user?.uid}/100/100`} />
+                          <AvatarFallback>{getInitials(userData?.name || '')}</AvatarFallback>
                       </Avatar>
                   </div>
-                  {/* Example of an incoming message. */}
                   <div className="flex items-start gap-3">
                       <Avatar>
-                          <AvatarImage data-ai-hint="professional person" src="https://picsum.photos/seed/doc1/100/100" />
-                          <AvatarFallback>DS</AvatarFallback>
+                          <AvatarImage data-ai-hint="professional person" src={`https://picsum.photos/seed/${selectedContact.id}/100/100`} />
+                          <AvatarFallback>{getInitials(contactName)}</AvatarFallback>
                       </Avatar>
                       <div className="bg-card p-3 rounded-lg max-w-xs">
-                          <p>Hi {firstPatient.firstName}, of course. What is your question?</p>
+                          <p>Hi, of course. What is your question?</p>
                           <p className="text-xs text-right mt-1 text-muted-foreground">3:46 PM</p>
                       </div>
                   </div>

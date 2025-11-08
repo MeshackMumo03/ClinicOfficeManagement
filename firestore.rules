@@ -116,8 +116,9 @@ service cloud.firestore {
     match /billings/{billingId} {
         // Let receptionists, admins, and the specific patient read.
         allow get: if isSignedIn() && (isReceptionist() || isAdmin() || resource.data.patientId == request.auth.uid);
-        // Let staff list billings. Client query restricts for doctors.
-        allow list: if isReceptionist() || isAdmin();
+        // Let any authenticated user attempt to list their billings.
+        // Client query is responsible for filtering to the current user.
+        allow list: if isSignedIn();
         // Only receptionists and admins can manage billing.
         allow create, update, delete: if isReceptionist() || isAdmin();
     }

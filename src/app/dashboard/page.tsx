@@ -1,7 +1,6 @@
 
 "use client";
 
-// Import necessary components and hooks.
 import {
   Card,
   CardContent,
@@ -24,84 +23,102 @@ import { Loader } from "@/components/layout/loader";
  * It shows a welcome message and role-based key metrics and quick actions.
  */
 export default function DashboardPage() {
+  // --- 1. USER AND ROLE SETUP ---
+  // Get the current authenticated user and their loading status.
   const { user, isUserLoading: isUserAuthLoading } = useUser();
+  // Get the Firestore instance.
   const firestore = useFirestore();
 
+  // Create a memoized reference to the user's document in the 'users' collection.
+  // This is used to fetch the user's role and other profile information.
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
   );
+  // Fetch the user's data and their role.
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   const userRole = userData?.role;
   const displayName = userData?.name || user?.email || "User";
 
-  // --- Role-Aware Data Fetching ---
+  // --- 2. ROLE-AWARE DATA FETCHING ---
 
-  // 1. Appointments Query
+  // APPOINTMENTS: Fetch appointments based on the user's role.
   const appointmentsQuery = useMemoFirebase(() => {
+    // Do not run the query until we have all necessary information.
     if (!firestore || !user || !userRole) return null;
+    
     const appointmentsCollection = collection(firestore, "appointments");
 
+    // Patients can only see their own appointments.
     if (userRole === "patient") {
       return query(appointmentsCollection, where("patientId", "==", user.uid));
     }
+    // Staff (admin, doctor, receptionist) can see all appointments.
     if (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') {
       return appointmentsCollection;
     }
+    // Return null for any other case to be safe.
     return null;
   }, [firestore, user, userRole]);
-
   const { data: appointments, isLoading: appointmentsLoading } = useCollection(appointmentsQuery);
 
-  // 2. Patients Query (only for staff)
+  // PATIENTS: Fetch the list of all patients, but only if the user is staff.
   const patientsQuery = useMemoFirebase(() => {
-    if (!firestore || !userRole) return null;
-    if (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') {
+    // Only run this query if the user is a staff member.
+    if (firestore && (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist')) {
       return collection(firestore, "patients");
     }
+    // For patients or other roles, do not fetch the patient list.
     return null;
   }, [firestore, userRole]);
-
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
-  // 3. Billings Query (Role-Aware)
+  // BILLINGS: Fetch billings, carefully respecting role permissions.
+  // This is the source of the error. We must NOT query this for doctors.
   const billingsQuery = useMemoFirebase(() => {
+    // Do not run the query until we have all necessary information.
     if (!firestore || !user || !userRole) return null;
   
-    // Doctors should not query for billings at all.
+    // CRITICAL: Doctors should not query for billings at all. Returning null prevents the query.
     if (userRole === 'doctor') {
       return null;
     }
   
     const billingsCollection = collection(firestore, "billings");
   
+    // Patients can only see their own billing records.
     if (userRole === "patient") {
       return query(billingsCollection, where("patientId", "==", user.uid));
     }
     
-    // Only run the full collection query for admin and receptionists.
+    // Only admins and receptionists are allowed to query the entire collection.
     if (userRole === 'admin' || userRole === 'receptionist') {
       return billingsCollection;
     }
     
-    return null; // Return null for any other case to prevent unauthorized queries.
+    // Return null for any other case to prevent unauthorized queries.
+    return null; 
   }, [firestore, user, userRole]);
-  
   const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);
 
-  // --- Loading State and Calculations ---
-  
-  const pageIsLoading = isUserAuthLoading || isUserDataLoading || (userRole && (appointmentsLoading || (patientsLoading && (userRole !== 'patient')) || (billingsLoading && userRole !== 'doctor')));
 
+  // --- 3. LOADING STATE & CALCULATIONS ---
+  
+  // Determine if the page is still loading any data.
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || patientsLoading || billingsLoading;
+
+  // Show a loader if any data is still being fetched.
   if (pageIsLoading) {
     return <Loader />;
   }
   
+  // Calculate total payments. If billings is null (e.g., for a doctor), it defaults to 0.
   const totalPayments =
     billings
       ?.filter((billing: any) => billing.paymentStatus === "paid")
       .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
 
+  // --- 4. RENDER THE DASHBOARD ---
   return (
     <div className="flex flex-col gap-8">
       {/* Header section with a welcome message. */}
@@ -127,6 +144,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Only show the 'New Patients' card to staff. */}
         {(userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') && (
           <Card>
             <CardHeader>
@@ -140,6 +158,7 @@ export default function DashboardPage() {
           </Card>
         )}
         
+        {/* Only show the 'Payments' card to roles who can see billing info. */}
         {(userRole === 'admin' || userRole === 'receptionist' || userRole === 'patient') && (
              <Card>
              <CardHeader>
@@ -156,7 +175,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Quick actions section with buttons for common tasks. */}
+      {/* Quick actions section with buttons for common tasks based on role. */}
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-bold">Quick Actions</h2>
         <div className="flex flex-wrap gap-4">

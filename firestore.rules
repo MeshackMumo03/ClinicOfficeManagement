@@ -15,12 +15,12 @@ service cloud.firestore {
     }
 
     // Function to get the requesting user's role document data
-    function getRoleData() {
+    function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function isUser(role) {
-      return isSignedIn() && getRoleData().role == role;
+      return isSignedIn() && getUserData().role == role;
     }
     
     function isAdmin() {
@@ -85,7 +85,7 @@ service cloud.firestore {
         isDoctor() ||
         isAdmin()
       );
-      // Staff roles can see all appointments. Patients can only list their own (via query).
+      // Staff roles can see all appointments. Patients can only list their own (which is handled by a client-side query).
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       // Patients, Doctors, Receptionists, and Admins can create appointments.
       allow create: if isSignedIn();

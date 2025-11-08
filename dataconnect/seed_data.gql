@@ -1,0 +1,128 @@
+mutation CreateSeedData @transaction @auth(level: USER, insecureReason: "This operation is used to populate seed data, it is safe to expose to all logged in users.") {
+  patient_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      firstName: "John",
+      lastName: "Doe",
+      email: "john.doe@example.com",
+      dateOfBirth: "1980-01-01",
+      gender: "Male",
+      createdAt: "2024-01-01T00:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      firstName: "Jane",
+      lastName: "Smith",
+      email: "jane.smith@example.com",
+      dateOfBirth: "1990-02-02",
+      gender: "Female",
+      createdAt: "2024-01-02T00:00:00Z"
+    }
+  ])
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      displayName: "Dr. Alice Brown",
+      email: "alice.brown@example.com",
+      role: "doctor",
+      createdAt: "2024-01-03T00:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440003",
+      displayName: "Dr. Bob Wilson",
+      email: "bob.wilson@example.com",
+      role: "doctor",
+      createdAt: "2024-01-04T00:00:00Z"
+    }
+  ])
+  appointment_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440004",
+      patientId: "550e8400-e29b-41d4-a716-446655440000",
+      doctorId: "550e8400-e29b-41d4-a716-446655440002",
+      appointmentDateTime: "2024-02-15T10:00:00Z",
+      reasonForVisit: "Checkup",
+      status: "Scheduled",
+      createdAt: "2024-01-05T00:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440005",
+      patientId: "550e8400-e29b-41d4-a716-446655440001",
+      doctorId: "550e8400-e29b-41d4-a716-446655440003",
+      appointmentDateTime: "2024-02-16T11:00:00Z",
+      reasonForVisit: "Follow-up",
+      status: "Scheduled",
+      createdAt: "2024-01-06T00:00:00Z"
+    }
+  ])
+  consultation_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440006",
+      appointmentId: "550e8400-e29b-41d4-a716-446655440004",
+      patientId: "550e8400-e29b-41d4-a716-446655440000",
+      doctorId: "550e8400-e29b-41d4-a716-446655440002",
+      consultationDate: "2024-02-15",
+      notes: "Patient is doing well.",
+      createdAt: "2024-01-07T00:00:00Z",
+      diagnosis: "Healthy",
+      treatmentPlan: "Continue current plan"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440007",
+      appointmentId: "550e8400-e29b-41d4-a716-446655440005",
+      patientId: "550e8400-e29b-41d4-a716-446655440001",
+      doctorId: "550e8400-e29b-41d4-a716-446655440003",
+      consultationDate: "2024-02-16",
+      notes: "Patient is improving.",
+      createdAt: "2024-01-08T00:00:00Z",
+      diagnosis: "Recovering",
+      treatmentPlan: "Continue current plan"
+    }
+  ])
+  invoice_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440008",
+      consultationId: "550e8400-e29b-41d4-a716-446655440006",
+      patientId: "550e8400-e29b-41d4-a716-446655440000",
+      invoiceDate: "2024-02-15",
+      description: "Consultation Fee",
+      status: "Paid",
+      totalAmount: 100.00,
+      createdAt: "2024-01-09T00:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440009",
+      consultationId: "550e8400-e29b-41d4-a716-446655440007",
+      patientId: "550e8400-e29b-41d4-a716-446655440001",
+      invoiceDate: "2024-02-16",
+      description: "Consultation Fee",
+      status: "Unpaid",
+      totalAmount: 100.00,
+      createdAt: "2024-01-10T00:00:00Z"
+    }
+  ])
+  prescription_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440010",
+      consultationId: "550e8400-e29b-41d4-a716-446655440006",
+      patientId: "550e8400-e29b-41d4-a716-446655440000",
+      medicationName: "Vitamin D",
+      dosage: "1000 IU",
+      instructions: "Take daily",
+      quantity: 30,
+      refills: 2,
+      createdAt: "2024-01-11T00:00:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440011",
+      consultationId: "550e8400-e29b-41d4-a716-446655440007",
+      patientId: "550e8400-e29b-41d4-a716-446655440001",
+      medicationName: "Probiotic",
+      dosage: "1 capsule",
+      instructions: "Take daily",
+      quantity: 30,
+      refills: 3,
+      createdAt: "2024-01-12T00:00:00Z"
+    }
+  ])
+}

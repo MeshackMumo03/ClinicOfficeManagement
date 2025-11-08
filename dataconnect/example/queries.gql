@@ -1,0 +1,27 @@
+mutation CreateNewPatient($firstName: String!, $lastName: String!, $dateOfBirth: Date!, $gender: String!, $email: String!) @auth(level: USER) {
+  patient_insert(data: {firstName: $firstName, lastName: $lastName, dateOfBirth: $dateOfBirth, gender: $gender, email: $email})
+}
+
+query GetConsultationsForPatient($patientId: UUID!) @auth(level: USER) {
+  consultations(where: {patientId: {eq: $patientId}}) {
+    id
+    consultationDate
+    notes
+    diagnosis
+    treatmentPlan
+  }
+}
+
+mutation CreateNewAppointment($doctorID: UUID!, $patientID: UUID!, $appointmentDateTime: Timestamp!, $reasonForVisit: String!, $status: String!) @auth(level: USER) {
+  appointment_insert(data: {doctorID: $doctorID, patientID: $patientID, appointmentDateTime: $appointmentDateTime, reasonForVisit: $reasonForVisit, status: $status})
+}
+
+query GetInvoicesForPatient($patientId: UUID!) @auth(level: USER) {
+  invoices(where: {patientId: {eq: $patientId}}) {
+    id
+    invoiceDate
+    totalAmount
+    status
+    description
+  }
+}

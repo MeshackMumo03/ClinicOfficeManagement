@@ -1,0 +1,61 @@
+type User @table {
+  email: String!
+  displayName: String!
+  role: String!
+  createdAt: Timestamp!
+  phoneNumber: String
+  photoUrl: String
+}
+
+type Patient @table {
+  firstName: String!
+  lastName: String!
+  dateOfBirth: Date!
+  gender: String!
+  createdAt: Timestamp!
+  address: String
+  phoneNumber: String
+  email: String
+  medicalHistorySummary: String
+}
+
+type Appointment @table {
+  patient: Patient!
+  doctor: User!
+  appointmentDateTime: Timestamp!
+  status: String!
+  createdAt: Timestamp!
+  reasonForVisit: String
+}
+
+type Consultation @table {
+  appointment: Appointment!
+  doctor: User!
+  patient: Patient!
+  consultationDate: Date!
+  notes: String!
+  createdAt: Timestamp!
+  diagnosis: String
+  treatmentPlan: String
+}
+
+type Prescription @table {
+  consultation: Consultation!
+  patient: Patient!
+  medicationName: String!
+  dosage: String!
+  instructions: String!
+  createdAt: Timestamp!
+  quantity: Int
+  refills: Int
+}
+
+type Invoice @table {
+  patient: Patient!
+  invoiceDate: Date!
+  totalAmount: Float!
+  status: String!
+  createdAt: Timestamp!
+  description: String
+  consultation: Consultation
+}

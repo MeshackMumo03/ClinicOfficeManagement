@@ -67,6 +67,12 @@ export default function DashboardPage() {
   // 3. Billings Query (Role-Aware)
   const billingsQuery = useMemoFirebase(() => {
     if (!firestore || !user || !userRole) return null;
+    
+    if (userRole === 'doctor') {
+        // Doctors should not query for billings at all.
+        return null;
+    }
+
     const billingsCollection = collection(firestore, "billings");
 
     if (userRole === "patient") {
@@ -75,7 +81,7 @@ export default function DashboardPage() {
     if (userRole === 'admin' || userRole === 'receptionist') {
       return billingsCollection;
     }
-    // Doctors do not have permission to view billings.
+    
     return null;
   }, [firestore, user, userRole]);
   

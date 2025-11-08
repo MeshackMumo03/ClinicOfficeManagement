@@ -1,159 +1,123 @@
-/**
- * @file Firebase Security Rules for Clinic Management System
- *
- * @corePhilosophy This ruleset enforces a strict user-ownership model for personal data,
- *   and role-based access for administrative data.  It prioritizes security and
- *   simplicity for rapid prototyping and iteration, with minimal data validation.
- *
- * @dataStructure
- *   - /users/{userId}: Stores user authentication and role information. 'userId' must match the Firebase auth UID.
- *   - /patients/{patientId}: Stores patient records.
- *   - /doctors/{doctorId}: Stores doctor records.
- *   - /appointments/{appointmentId}: Stores appointment records.
- *   - /consultations/{consultationId}: Stores consultation records.
- *   - /prescriptions/{prescriptionId}: Stores prescription records.
- *   - /billings/{billingId}: Stores billing records.
- *   - /users/{userId}/documents/{documentId}: Stores documents uploaded by patients, nested under the user's ID.
- *
- * @keySecurityDecisions
- *   - User listing is disallowed to protect privacy.
- *   - Data validation is minimized to focus on authorization during prototyping.
- *   - The `isOwner()` helper function centralizes ownership checks for improved maintainability.
- *   - Access to patient documents is restricted to the owning patient, doctors, and receptionists.
- *
- * @denormalizationForAuthorization
- *   - Documents stored under `/users/{userId}/documents/{documentId}` include a denormalized `patientId` to allow listing all documents for a patient.
- *   - This avoids the need for complex queries or `get()` calls in security rules.
- */
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // ======== HELPER FUNCTIONS ========
 
-    /**
-     * @description Secure access to user profiles. Only the authenticated user can read or write their own profile.
-     * @path /users/{userId}
-     * @allow (get, update) if isSignedIn() && isOwner(userId)
-     * @allow (create) if isSignedIn() && isOwner(userId) && request.auth.uid == userId
-     * @deny (delete) Always deny user deletion through client-side rules.
-     * @deny (list) Listing all users is prohibited.
-     * @principle Enforces user-ownership and prevents unauthorized data access.
-     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Function to get the requesting user's role document data
+    function getRoleData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isUser(role) {
+      return isSignedIn() && getRoleData().role == role;
+    }
+    
+    function isAdmin() {
+      return isUser('admin');
+    }
+
+    function isDoctor() {
+      return isUser('doctor');
+    }
+
+    function isReceptionist() {
+      return isUser('receptionist');
+    }
+
+    function isPatient() {
+      return isUser('patient');
+    }
+
+    // ======== COLLECTION RULES ========
+
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId) && request.auth.uid == userId;
-      allow update: if isSignedIn() && isOwner(userId);
+      // Allow users to read their own profile (for role checks) and admins to read any.
+      allow get: if isOwner(userId) || isAdmin();
+      // Users can create and update their own profile.
+      allow create, update: if isOwner(userId);
+      // Only admins can see the full list of users.
+      allow list: if isAdmin();
+      // Do not allow client-side deletes of user documents.
       allow delete: if false;
     }
 
-    /**
-     * @description Secure access to patient records. Accessible to receptionists, doctors, and the patient themselves.
-     * @path /patients/{patientId}
-     * @allow (get, list) if true; // Assuming public read access for all patient records.
-     * @allow (create, update, delete) if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-     * @principle Enforces role-based access control and prevents unauthorized data modification.
-     */
     match /patients/{patientId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based access control here
+      // A patient can get their own record. Doctors, Receptionists, and Admins can get any patient record.
+      allow get: if (isPatient() && isOwner(patientId)) || isDoctor() || isReceptionist() || isAdmin();
+      // Doctors, Receptionists, and Admins can list all patients.
+      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      // Patients can create their own record on signup. Staff can create new patients.
+      allow create: if isOwner(patientId) || isReceptionist() || isAdmin();
+      // Only staff can update patient records.
+      allow update: if isReceptionist() || isDoctor() || isAdmin();
+      // Only Admins can delete patient records.
+      allow delete: if isAdmin();
     }
 
-    /**
-     * @description Secure access to doctor records. Accessible to administrators and receptionists.
-     * @path /doctors/{doctorId}
-     * @allow (get, list) if true; // Assuming public read access for all doctor records.
-     * @allow (create, update, delete) if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-     * @principle Enforces role-based access control and prevents unauthorized data modification.
-     */
     match /doctors/{doctorId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based access control here
+        // Any authenticated user can view a doctor's profile.
+        allow get, list: if isSignedIn();
+        // A doctor can create their own record on signup. Admins can create new doctors.
+        allow create: if (isDoctor() && isOwner(doctorId)) || isAdmin();
+        // Doctors can update their own profile. Admins can update any.
+        allow update: if (isDoctor() && isOwner(doctorId)) || isAdmin();
+        // Only Admins can delete doctor records.
+        allow delete: if isAdmin();
     }
 
-    /**
-     * @description Secure access to appointment records. Accessible to receptionists, doctors, and patients involved in the appointment.
-     * @path /appointments/{appointmentId}
-     * @allow (get, list) if true; // Assuming public read access for all appointment records.
-     * @allow (create, update, delete) if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-     * @principle Enforces role-based access control and prevents unauthorized data modification.
-     */
     match /appointments/{appointmentId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based access control here
+      // Involved parties (patient, doctor) and staff can view appointments.
+      allow get: if isSignedIn() && (
+        resource.data.patientId == request.auth.uid ||
+        resource.data.doctorId == request.auth.uid ||
+        isReceptionist() ||
+        isAdmin()
+      );
+      // Staff roles can see all appointments. Patients can only list their own (via query).
+      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      // Patients, Doctors, Receptionists, and Admins can create appointments.
+      allow create: if isSignedIn();
+      // Only staff can update appointments.
+      allow update, delete: if isDoctor() || isReceptionist() || isAdmin();
     }
 
-    /**
-     * @description Secure access to consultation records. Accessible to the doctor and patient involved in the consultation.
-     * @path /consultations/{consultationId}
-     * @allow (get, list) if true; // Assuming public read access for all consultation records.
-     * @allow (create, update, delete) if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-     * @principle Enforces role-based access control and prevents unauthorized data modification.
-     */
     match /consultations/{consultationId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based access control here
+        // Let staff and involved patient/doctor read.
+        allow get: if isSignedIn() && (isDoctor() || isReceptionist() || isAdmin() || resource.data.patientId == request.auth.uid);
+        allow list: if isDoctor() || isReceptionist() || isAdmin();
+        // Only doctors and admins can create/update/delete.
+        allow create, update, delete: if isDoctor() || isAdmin();
     }
 
-    /**
-     * @description Secure access to prescription records. Accessible to the doctor and patient associated with the prescription.
-     * @path /prescriptions/{prescriptionId}
-     * @allow (get, list) if true; // Assuming public read access for all prescription records.
-     * @allow (create, update, delete) if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-     * @principle Enforces role-based access control and prevents unauthorized data modification.
-     */
     match /prescriptions/{prescriptionId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based access control here
+        // Let staff and involved patient/doctor read.
+        allow get: if isSignedIn() && (isDoctor() || isReceptionist() || isAdmin() || get(/databases/$(database)/documents/consultations/$(resource.data.consultationId)).data.patientId == request.auth.uid);
+        allow list: if isDoctor() || isReceptionist() || isAdmin();
+        // Only doctors and admins can create/update/delete.
+        allow create, update, delete: if isDoctor() || isAdmin();
     }
 
-    /**
-     * @description Secure access to billing records. Accessible to receptionists and the patient associated with the billing record.
-     * @path /billings/{billingId}
-     * @allow (get, list) if true; // Assuming public read access for all billing records.
-     * @allow (create, update, delete) if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-     * @principle Enforces role-based access control and prevents unauthorized data modification.
-     */
     match /billings/{billingId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based access control here
+        // Let receptionists, admins, and the specific patient read.
+        allow get: if isSignedIn() && (isReceptionist() || isAdmin() || resource.data.patientId == request.auth.uid);
+        allow list: if isReceptionist() || isAdmin();
+        // Only receptionists and admins can manage billing.
+        allow create, update, delete: if isReceptionist() || isAdmin();
     }
 
-    /**
-     * @description Secure access to patient documents. Only the authenticated user (patient) can read or write their own documents.
-     * @path /users/{userId}/documents/{documentId}
-     * @allow (get, list) if isSignedIn() && isOwner(userId)
-     * @allow (create) if isSignedIn() && isOwner(userId) && request.resource.data.patientId == userId;
-     * @allow (update) if isSignedIn() && isExistingOwner(userId) && request.resource.data.patientId == resource.data.patientId;
-     * @allow (delete) if isSignedIn() && isExistingOwner(userId)
-     * @deny  create, update, delete: if !isSignedIn() || !isOwner(userId);
-     * @principle Enforces user-ownership and prevents unauthorized data access.
-     */
     match /users/{userId}/documents/{documentId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isSignedIn() && isOwner(userId) && resource != null;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.patientId == userId;
-      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.patientId == resource.data.patientId;
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow get, list, create, update, delete: if isOwner(userId);
     }
   }
 }

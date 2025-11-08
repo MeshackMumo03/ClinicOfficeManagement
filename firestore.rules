@@ -86,7 +86,7 @@ service cloud.firestore {
         isAdmin()
       );
       // Staff roles can see all appointments. Patients can only list their own (which is handled by a client-side query).
-      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      allow list: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getUserData().role == 'doctor' || getUserData().role == 'receptionist' || getUserData().role == 'admin');
       // Patients, Doctors, Receptionists, and Admins can create appointments.
       allow create: if isSignedIn();
       // Only staff can update appointments.
@@ -112,7 +112,7 @@ service cloud.firestore {
     match /billings/{billingId} {
         // Let receptionists, admins, and the specific patient read.
         allow get: if isSignedIn() && (isReceptionist() || isAdmin() || resource.data.patientId == request.auth.uid);
-        allow list: if isReceptionist() || isAdmin();
+        allow list: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getUserData().role == 'receptionist' || getUserData().role == 'admin');
         // Only receptionists and admins can manage billing.
         allow create, update, delete: if isReceptionist() || isAdmin();
     }

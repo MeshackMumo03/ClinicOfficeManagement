@@ -70,9 +70,12 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
   const { data: userData } = useDoc(userDocRef);
   const userRole = userData?.role;
 
+  // CRITICAL FIX: Only fetch the list of all patients if the user is NOT a patient.
+  // This prevents the permission error for patient users.
+  const canFetchPatients = userRole === 'admin' || userRole === 'receptionist';
   const patientsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, "patients") : null),
-    [firestore]
+    () => (firestore && canFetchPatients ? collection(firestore, "patients") : null),
+    [firestore, canFetchPatients]
   );
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
@@ -86,11 +89,14 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
     resolver: zodResolver(formSchema),
     defaultValues: {
       patientId: userRole === 'patient' ? user?.uid : '',
+      doctorId: '',
+      reasonForVisit: '',
     }
   });
 
-  const { formState, handleSubmit, control, setValue } = form;
+  const { formState, handleSubmit, control, setValue, reset } = form;
 
+  // When the user's role is determined to be 'patient', set the patientId field in the form.
   useEffect(() => {
     if (userRole === 'patient' && user?.uid) {
       setValue('patientId', user.uid);
@@ -99,6 +105,14 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
 
 
   const onSubmit = async (data: FormData) => {
+    if (!firestore) {
+        toast({
+            variant: "destructive",
+            title: "Booking Failed",
+            description: "Database not available.",
+        });
+        return;
+    }
     try {
       const appointmentData = {
         ...data,
@@ -113,7 +127,14 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
         title: "Appointment Booked",
         description: "The new appointment has been successfully scheduled.",
       });
-      form.reset();
+      
+      // Reset form to default values, which will pre-fill patientId again if the user is a patient.
+      reset({
+        patientId: userRole === 'patient' ? user?.uid : '',
+        doctorId: '',
+        reasonForVisit: '',
+      });
+
       setIsOpen(false);
     } catch (error: any) {
       toast({
@@ -137,6 +158,7 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
+              {/* Only show the patient dropdown to staff members. Patients book for themselves. */}
               {userRole !== 'patient' && (
                 <FormField
                   control={control}
@@ -226,8 +248,9 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
                                 value={field.value ? format(field.value, "HH:mm") : ""}
                                 onChange={(e) => {
                                     const time = e.target.value;
+                                    if (!time) return;
                                     const [hours, minutes] = time.split(':').map(Number);
-                                    const newDate = new Date(field.value || new Date());
+                                    const newDate = field.value ? new Date(field.value) : new Date();
                                     newDate.setHours(hours, minutes);
                                     field.onChange(newDate);
                                 }}

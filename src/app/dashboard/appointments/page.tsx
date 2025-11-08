@@ -123,14 +123,12 @@ export default function AppointmentsPage() {
         <div>
           <h1 className="font-headline text-3xl md:text-4xl">Appointments</h1>
         </div>
-        {userRole !== 'patient' && (
-          <NewAppointmentDialog>
+        <NewAppointmentDialog>
             <Button>
-              <PlusCircle className="mr-2" />
-              New Appointment
+                <PlusCircle className="mr-2" />
+                New Appointment
             </Button>
-          </NewAppointmentDialog>
-        )}
+        </NewAppointmentDialog>
       </div>
 
       {/* Filter section with dropdown menus for doctor, date, and status. */}

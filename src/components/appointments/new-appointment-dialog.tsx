@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -41,10 +41,10 @@ import {
     PopoverContent,
     PopoverTrigger,
   } from "@/components/ui/popover";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from "@/firebase";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
-import { collection } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 
 const formSchema = z.object({
   patientId: z.string().min(1, "Patient is required."),
@@ -61,6 +61,14 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
   const [isOpen, setIsOpen] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user } = useUser();
+
+  const userDocRef = useMemoFirebase(
+    () => (user ? doc(firestore, "users", user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userData } = useDoc(userDocRef);
+  const userRole = userData?.role;
 
   const patientsQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, "patients") : null),
@@ -76,9 +84,19 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      patientId: userRole === 'patient' ? user?.uid : '',
+    }
   });
 
-  const { formState, handleSubmit, control } = form;
+  const { formState, handleSubmit, control, setValue } = form;
+
+  useEffect(() => {
+    if (userRole === 'patient' && user?.uid) {
+      setValue('patientId', user.uid);
+    }
+  }, [userRole, user, setValue]);
+
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -119,30 +137,32 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
-              <FormField
-                control={control}
-                name="patientId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Patient</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger disabled={patientsLoading}>
-                          <SelectValue placeholder="Select a patient" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {patients?.map((p: any) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.firstName} {p.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {userRole !== 'patient' && (
+                <FormField
+                  control={control}
+                  name="patientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Patient</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger disabled={patientsLoading}>
+                            <SelectValue placeholder="Select a patient" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {patients?.map((p: any) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.firstName} {p.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={control}
                 name="doctorId"

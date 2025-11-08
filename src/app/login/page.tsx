@@ -25,12 +25,13 @@ import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
  * If the document doesn't exist, it creates one.
  * @param db Firestore instance.
  * @param user The authenticated user object.
- * @param userRole The role of the user (e.g., 'patient', 'doctor').
+ * @param userDocData The user's data from the /users/{uid} document.
  */
-const ensureRoleDocumentExists = async (db: any, user: User, userRole: string) => {
-  if (!userRole || !user) return;
+const ensureRoleDocumentExists = async (db: any, user: User, userDocData: any) => {
+  if (!userDocData?.role || !user) return;
 
-  const name = user.displayName || 'Unnamed User';
+  const userRole = userDocData.role;
+  const name = userDocData.name || user.displayName || 'Unnamed User';
   const [firstName, ...lastNameParts] = name.split(' ');
   const lastName = lastNameParts.join(' ') || ' ';
 
@@ -82,7 +83,7 @@ const handlePostLogin = async (db: any, user: User, router: any) => {
 
     if (docSnap.exists()) {
         const userData = docSnap.data();
-        await ensureRoleDocumentExists(db, user, userData.role);
+        await ensureRoleDocumentExists(db, user, userData);
 
         if (userData.role === 'admin') {
             router.push("/admin");
@@ -91,6 +92,16 @@ const handlePostLogin = async (db: any, user: User, router: any) => {
         }
     } else {
         // Fallback for users who might not have a user document yet.
+        // This can happen with Google sign-in if the user record isn't created yet.
+        // We'll create a basic user doc here.
+        const basicUserData = {
+            uid: user.uid,
+            name: user.displayName || 'New User',
+            email: user.email,
+            role: 'patient', // Default to patient
+        };
+        await setDoc(userDocRef, basicUserData, { merge: true });
+        await ensureRoleDocumentExists(db, user, basicUserData);
         router.push("/dashboard");
     }
 };

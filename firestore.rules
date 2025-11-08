@@ -82,6 +82,7 @@ service cloud.firestore {
         resource.data.patientId == request.auth.uid ||
         resource.data.doctorId == request.auth.uid ||
         isReceptionist() ||
+        isDoctor() ||
         isAdmin()
       );
       // Staff roles can see all appointments. Patients can only list their own (via query).

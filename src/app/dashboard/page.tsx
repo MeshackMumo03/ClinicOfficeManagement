@@ -1,6 +1,8 @@
 
 "use client";
 
+// --- IMPORTS ---
+// Import necessary hooks and components from React, Firebase, and your UI library.
 import {
   Card,
   CardContent,
@@ -19,32 +21,37 @@ import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/layout/loader";
 
 /**
- * DashboardPage component to display the main dashboard.
- * It shows a welcome message and role-based key metrics and quick actions.
+ * DashboardPage: The main landing page for logged-in users.
+ * It displays a welcome message and a set of key metrics and quick actions
+ * that are tailored to the user's specific role (e.g., admin, doctor, patient).
  */
 export default function DashboardPage() {
   // --- 1. USER AND ROLE SETUP ---
-  // Get the current authenticated user and their loading status.
+  // Get the current authenticated user and their loading status from the useUser hook.
   const { user, isUserLoading: isUserAuthLoading } = useUser();
   // Get the Firestore instance.
   const firestore = useFirestore();
 
   // Create a memoized reference to the user's document in the 'users' collection.
   // This is used to fetch the user's role and other profile information.
+  // useMemoFirebase ensures the reference is stable and prevents re-renders.
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
     [user, firestore]
   );
-  // Fetch the user's data and their role.
+  // Fetch the user's data from the document reference.
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  // Extract the user's role and a display name for the welcome message.
   const userRole = userData?.role;
   const displayName = userData?.name || user?.email || "User";
 
   // --- 2. ROLE-AWARE DATA FETCHING ---
+  // This section fetches data from Firestore based on the user's role to prevent
+  // permission errors and ensure users only see data they are allowed to see.
 
-  // APPOINTMENTS: Fetch appointments based on the user's role.
+  // APPOINTMENTS: Fetch appointments relevant to the user's role.
   const appointmentsQuery = useMemoFirebase(() => {
-    // Do not run the query until we have all necessary information.
+    // Do not run the query until we have all the necessary information.
     if (!firestore || !user || !userRole) return null;
     
     const appointmentsCollection = collection(firestore, "appointments");
@@ -74,12 +81,13 @@ export default function DashboardPage() {
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
   // BILLINGS: Fetch billings, carefully respecting role permissions.
-  // This is the source of the error. We must NOT query this for doctors.
+  // This is the source of the error and the critical fix is here.
   const billingsQuery = useMemoFirebase(() => {
     // Do not run the query until we have all necessary information.
     if (!firestore || !user || !userRole) return null;
   
-    // CRITICAL: Doctors should not query for billings at all. Returning null prevents the query.
+    // CRITICAL FIX: Doctors should not query for billings at all.
+    // Returning null here prevents the useCollection hook from making a Firestore request.
     if (userRole === 'doctor') {
       return null;
     }
@@ -99,29 +107,31 @@ export default function DashboardPage() {
     // Return null for any other case to prevent unauthorized queries.
     return null; 
   }, [firestore, user, userRole]);
+  // The useCollection hook will now receive 'null' for doctors and will not attempt a fetch.
   const { data: billings, isLoading: billingsLoading } = useCollection(billingsQuery);
 
 
   // --- 3. LOADING STATE & CALCULATIONS ---
   
-  // Determine if the page is still loading any data.
+  // Determine if the page is still loading any essential data.
   const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || patientsLoading || billingsLoading;
 
-  // Show a loader if any data is still being fetched.
+  // Show a full-screen loader while data is being fetched.
   if (pageIsLoading) {
     return <Loader />;
   }
   
-  // Calculate total payments. If billings is null (e.g., for a doctor), it defaults to 0.
+  // Calculate total payments. If billings is null or undefined (e.g., for a doctor),
+  // the '|| 0' ensures this defaults to 0 instead of causing an error.
   const totalPayments =
     billings
       ?.filter((billing: any) => billing.paymentStatus === "paid")
       .reduce((sum: number, billing: any) => sum + (billing.amount || 0), 0) || 0;
 
-  // --- 4. RENDER THE DASHBOARD ---
+  // --- 4. RENDER THE DASHBOARD UI ---
   return (
     <div className="flex flex-col gap-8">
-      {/* Header section with a welcome message. */}
+      {/* Header section with a personalized welcome message. */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-headline text-3xl md:text-4xl font-bold tracking-tight">
@@ -131,7 +141,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Grid of cards displaying key metrics based on role. */}
+      {/* Grid of cards displaying key metrics based on the user's role. */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -144,7 +154,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Only show the 'New Patients' card to staff. */}
+        {/* Only show the 'New Patients' card to staff roles. */}
         {(userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') && (
           <Card>
             <CardHeader>
@@ -159,6 +169,7 @@ export default function DashboardPage() {
         )}
         
         {/* Only show the 'Payments' card to roles who can see billing info. */}
+        {/* This card will not be rendered for doctors, as `billings` will be null. */}
         {(userRole === 'admin' || userRole === 'receptionist' || userRole === 'patient') && (
              <Card>
              <CardHeader>

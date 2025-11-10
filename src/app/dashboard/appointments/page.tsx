@@ -19,11 +19,12 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
-import { PlusCircle, ListFilter } from "lucide-react";
+import { PlusCircle, ListFilter, MoreHorizontal } from "lucide-react";
 import { Loader } from "@/components/layout/loader";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 
@@ -73,8 +74,8 @@ export default function AppointmentsPage() {
 
     // Fetch all patients only if the user has the right role.
     const patientsQuery = useMemoFirebase(() => {
-      if (!firestore || !canFetchAllPatients) return null;
-      return collection(firestore, "patients");
+        if (!firestore || !canFetchAllPatients) return null;
+        return collection(firestore, "patients");
     }, [firestore, canFetchAllPatients]);
     const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
@@ -110,6 +111,8 @@ export default function AppointmentsPage() {
     // Get unique statuses from appointments for the filter dropdown.
     const statuses = appointments ? Array.from(new Set(appointments.map((a: any) => a.status))) : [];
 
+    const canManageAppointments = userRole === 'admin' || userRole === 'receptionist' || userRole === 'doctor';
+
     const pageIsLoading = isUserLoading || isUserDataLoading || appointmentsLoading || doctorsLoading || (canFetchAllPatients && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
 
     if (pageIsLoading) {
@@ -123,7 +126,7 @@ export default function AppointmentsPage() {
         <div>
           <h1 className="font-headline text-3xl md:text-4xl">Appointments</h1>
         </div>
-        {(userRole === 'admin' || userRole === 'receptionist' || userRole === 'patient') && (
+        {(canManageAppointments || userRole === 'patient') && (
           <NewAppointmentDialog>
               <Button>
                   <PlusCircle className="mr-2" />
@@ -200,6 +203,9 @@ export default function AppointmentsPage() {
                 <TableHead>Doctor</TableHead>
                 <TableHead>Date & Time</TableHead>
                 <TableHead>Status</TableHead>
+                 {canManageAppointments && (
+                    <TableHead className="text-right">Actions</TableHead>
+                 )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -230,6 +236,23 @@ export default function AppointmentsPage() {
                       {appointment.status}
                     </Badge>
                   </TableCell>
+                   {canManageAppointments && (
+                        <TableCell className="text-right">
+                           <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive">Cancel</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                   )}
                 </TableRow>
               ))}
             </TableBody>

@@ -49,8 +49,8 @@ service cloud.firestore {
       allow create, update: if isOwner(userId);
       // Only admins can see the full list of users.
       allow list: if isAdmin();
-      // Do not allow client-side deletes of user documents.
-      allow delete: if false;
+      // Allow admins to delete user documents.
+      allow delete: if isAdmin();
     }
 
     match /patients/{patientId} {

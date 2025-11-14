@@ -418,16 +418,16 @@ export function ConsultationForm() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Prescription</h3>
+              <h3 className="text-lg font-medium">Treatment Plan</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="drugName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Drug Name</FormLabel>
+                      <FormLabel>Medication</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter drug name..." {...field} />
+                        <Input placeholder="e.g., Paracetamol" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -440,7 +440,7 @@ export function ConsultationForm() {
                     <FormItem>
                       <FormLabel>Dosage</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter dosage..." {...field} />
+                        <Input placeholder="e.g., 500mg" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -452,9 +452,9 @@ export function ConsultationForm() {
                 name="instructions"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Instructions</FormLabel>
+                    <FormLabel>Instructions & Other Treatments</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Enter instructions..." {...field} rows={3} />
+                      <Textarea placeholder="Detail prescription instructions, recommended lab tests, lifestyle changes, or specialist referrals." {...field} rows={4} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

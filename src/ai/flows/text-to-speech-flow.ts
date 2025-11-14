@@ -21,7 +21,7 @@ export type TextToSpeechInput = z.infer<typeof TextToSpeechInputSchema>;
 const TextToSpeechOutputSchema = z.object({
   transcript: z.string().describe("The transcribed text from the audio."),
 });
-export type TextToSpeechOutput = z-infer<typeof TextToSpeechOutputSchema>;
+export type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;
 
 
 export async function textToSpeech(input: TextToSpeechInput): Promise<TextToSpeechOutput> {

@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Badge } from "../ui/badge";
 import { EditPatientDialog } from "./edit-patient-dialog";
 import { Button } from "../ui/button";
+import { DocumentManager } from "./document-manager";
+
 
 // Define the type for a patient.
 export type Patient = {
@@ -119,6 +121,7 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
         <TabsList className="mb-6">
           <TabsTrigger value="personal-info">Personal Info</TabsTrigger>
           <TabsTrigger value="consultation-history">Consultation History</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
           <TabsTrigger value="billing-records">Billing Records</TabsTrigger>
         </TabsList>
@@ -148,6 +151,9 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
         {/* Consultation history tab content. */}
         <TabsContent value="consultation-history">
           <ConsultationHistory patientId={patient.id} />
+        </TabsContent>
+        <TabsContent value="documents">
+            <DocumentManager patientId={patient.id} />
         </TabsContent>
         <TabsContent value="prescriptions">
           <p className="text-muted-foreground">Prescription records will be displayed here.</p>

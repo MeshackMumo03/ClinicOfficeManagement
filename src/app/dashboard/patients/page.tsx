@@ -8,7 +8,9 @@ import { collection, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CreatePatientDialog } from "@/components/patients/create-patient-dialog";
 
 /**
  * PatientsPage component to display a list of patients and a profile of the selected patient.
@@ -28,6 +30,7 @@ export default function PatientsPage() {
   const userRole = userData?.role;
 
   const canViewPatients = userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist';
+  const canManagePatients = userRole === 'admin' || userRole === 'receptionist';
 
   const patientsQuery = useMemoFirebase(
     () => (firestore && canViewPatients ? collection(firestore, "patients") : null),
@@ -66,9 +69,24 @@ export default function PatientsPage() {
   }
 
   return (
-    // Grid layout to display patient list and profile side-by-side on medium screens and larger.
+    <>
+    <div className="flex items-center justify-between mb-8">
+        <div>
+            <h1 className="font-headline text-3xl md:text-4xl">Patient Management</h1>
+            <p className="text-muted-foreground">
+                View, create, and edit patient records.
+            </p>
+        </div>
+        {canManagePatients && (
+            <CreatePatientDialog>
+                <Button>
+                    <PlusCircle className="mr-2" />
+                    Create Patient
+                </Button>
+            </CreatePatientDialog>
+        )}
+    </div>
     <div className="grid md:grid-cols-[350px_1fr] gap-8 items-start">
-      {/* PatientList component to display the list of patients. */}
       {patients ? (
         <PatientList patients={patients} selectedPatientId={selectedPatient?.id} onSelectPatient={handleSelectPatient} />
       ) : (
@@ -76,9 +94,8 @@ export default function PatientsPage() {
           <p className="text-muted-foreground">No patients found or you do not have permission to view them.</p>
         </div>
       )}
-      {/* Conditionally render PatientProfile if a patient is selected, otherwise show a message. */}
       {selectedPatient ? (
-        <PatientProfile patient={selectedPatient} />
+        <PatientProfile patient={selectedPatient} canManagePatients={canManagePatients} />
       ) : (
         <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
             <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
@@ -86,5 +103,6 @@ export default function PatientsPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

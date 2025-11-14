@@ -1,3 +1,4 @@
+
 // Import the Tabs components from ShadCN and other necessary modules.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
@@ -5,9 +6,11 @@ import { collection, query, where, orderBy } from "firebase/firestore";
 import { Loader } from "../layout/loader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
+import { EditPatientDialog } from "./edit-patient-dialog";
+import { Button } from "../ui/button";
 
 // Define the type for a patient.
-type Patient = {
+export type Patient = {
     id: string;
     firstName: string;
     lastName: string;
@@ -22,6 +25,7 @@ type Patient = {
 // Define the props for the PatientProfile component.
 interface PatientProfileProps {
   patient: Patient;
+  canManagePatients: boolean;
 }
 
 /**
@@ -99,13 +103,16 @@ function ConsultationHistory({ patientId }: { patientId: string }) {
  * It uses tabs to organize the information into different sections.
  * @param {PatientProfileProps} props - The properties for the component.
  */
-export function PatientProfile({ patient }: PatientProfileProps) {
+export function PatientProfile({ patient, canManagePatients }: PatientProfileProps) {
   return (
     <div>
         {/* Header with patient's name and ID. */}
-        <div className="mb-6">
-            <h1 className="font-headline text-3xl font-bold">Patient Profile</h1>
-            <p className="text-muted-foreground">Patient ID: {patient.id}</p>
+        <div className="mb-6 flex justify-between items-start">
+            <div>
+                <h1 className="font-headline text-3xl font-bold">Patient Profile</h1>
+                <p className="text-muted-foreground">Patient ID: {patient.id}</p>
+            </div>
+            {canManagePatients && <EditPatientDialog patient={patient} />}
         </div>
       {/* Tabs to navigate between different sections of the patient's profile. */}
       <Tabs defaultValue="personal-info">

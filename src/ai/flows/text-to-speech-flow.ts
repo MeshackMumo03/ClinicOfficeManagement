@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { geminiPro } from '@genkit-ai/google-genai';
 
 const TextToSpeechInputSchema = z.object({
   audioB64: z.string().describe("A Base64-encoded audio chunk."),
@@ -36,7 +35,7 @@ const textToSpeechFlow = ai.defineFlow(
   },
   async (input) => {
     const llmResponse = await ai.generate({
-      model: geminiPro,
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: {
         text: 'Transcribe the following audio recording. The recording is from a doctor during a patient consultation. The transcription should be clean and accurate.',
         media: [{

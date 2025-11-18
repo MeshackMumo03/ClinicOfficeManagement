@@ -31,8 +31,11 @@ import { Loader } from "../layout/loader";
 import { useEffect, useState, useRef } from "react";
 import { getDiagnosisSuggestion } from "@/lib/actions";
 import { audioTranscription } from "@/ai/flows/audio-transcription-flow";
-import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2 } from "lucide-react";
+import { documentTagging } from "@/ai/flows/document-tagging-flow";
+import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2, Upload, File as FileIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { Badge } from "../ui/badge";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 
 const treatmentSchema = z.object({
@@ -41,17 +44,29 @@ const treatmentSchema = z.object({
   instructions: z.string().optional(),
 });
 
+const documentSchema = z.object({
+  fileName: z.string(),
+  fileType: z.string(),
+  fileSize: z.number(),
+  downloadURL: z.string(),
+  storagePath: z.string(),
+  tags: z.array(z.string()).optional(),
+});
+
 const formSchema = z.object({
   patientId: z.string().min(1, "Patient selection is required."),
   symptoms: z.string().optional(),
   examFindings: z.string().optional(),
   labResults: z.string().optional(),
+  documents: z.array(documentSchema).optional(),
   notes: z.string().optional(),
   diagnosis: z.string().optional(),
   treatments: z.array(treatmentSchema).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
+type DocumentFormData = z.infer<typeof documentSchema>;
+
 
 export function ConsultationForm() {
   const { user, isUserLoading } = useUser();
@@ -66,6 +81,10 @@ export function ConsultationForm() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
+
+  // Document upload state
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   const userDocRef = useMemoFirebase(
@@ -96,6 +115,7 @@ export function ConsultationForm() {
       symptoms: "",
       examFindings: "",
       labResults: "",
+      documents: [],
       notes: "",
       diagnosis: "",
       treatments: [{ drugName: "", dosage: "", instructions: "" }],
@@ -106,6 +126,90 @@ export function ConsultationForm() {
     control: form.control,
     name: "treatments",
   });
+
+  const { fields: documentFields, append: appendDocument, remove: removeDocument } = useFieldArray({
+    control: form.control,
+    name: "documents",
+  });
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            resolve(reader.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user || !selectedPatientId) {
+        toast({
+            variant: "destructive",
+            title: "Upload Failed",
+            description: "Please select a patient before uploading documents.",
+        });
+        return;
+    };
+
+    setIsUploading(true);
+    try {
+        // 1. Upload to Firebase Storage
+        const storage = getStorage();
+        const storagePath = `documents/${selectedPatientId}/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadResult = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        const newDocument: DocumentFormData = {
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            downloadURL: downloadURL,
+            storagePath: storagePath,
+            tags: [],
+        };
+        
+        appendDocument(newDocument);
+        
+        toast({
+            title: "Upload Successful",
+            description: `${file.name} has been added. Generating AI tags...`,
+        });
+
+        // 2. Get AI Tags
+        const fileDataUri = await blobToBase64(file);
+        const tagResult = await documentTagging({ documentDataUri: fileDataUri });
+
+        if (tagResult.tags) {
+            // Find the document we just added and update its tags
+            const currentDocs = form.getValues('documents') || [];
+            const docIndex = currentDocs.findIndex(doc => doc.storagePath === storagePath);
+            if (docIndex !== -1) {
+                const updatedDocs = [...currentDocs];
+                updatedDocs[docIndex].tags = tagResult.tags;
+                form.setValue('documents', updatedDocs);
+            }
+            toast({
+                title: "AI Tags Generated",
+                description: `Tags have been added to ${file.name}.`,
+            });
+        }
+    } catch (error) {
+        console.error("Error during file upload and tagging:", error);
+        toast({
+            variant: "destructive",
+            title: "Processing Failed",
+            description: "Could not upload the file or generate tags. Please try again.",
+        });
+    } finally {
+        setIsUploading(false);
+        if(fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
 
   useEffect(() => {
     if (selectedPatient) {
@@ -183,25 +287,10 @@ export function ConsultationForm() {
       }
   };
 
-  const blobToBase64 = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result as string;
-            // The result includes the data URL prefix, so we strip it.
-            const content = base64String.split(',')[1];
-            resolve(content);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-  }
-
-
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
     try {
-        const base64Audio = await blobToBase64(blob);
+        const base64Audio = (await blobToBase64(blob)).split(',')[1];
         const result = await audioTranscription({ audioB64: base64Audio });
         
         if (result.transcript) {
@@ -240,10 +329,21 @@ export function ConsultationForm() {
         consultationDateTime: new Date().toISOString(),
         notes: data.notes,
         diagnosis: data.diagnosis,
-        prescriptionIds: [],
+        prescriptionIds: [], // This will be populated by prescription creation
+        documentIds: data.documents?.map(doc => doc.storagePath) || [],
       };
 
       const consultationRef = await addDocumentNonBlocking(collection(firestore, "consultations"), consultationData);
+      
+      // Save documents to the patient's subcollection
+      if (data.documents && data.documents.length > 0 && consultationRef) {
+        const documentPromises = data.documents.map(docData => {
+            const docCollectionRef = collection(firestore, 'users', data.patientId, 'documents');
+            return addDocumentNonBlocking(docCollectionRef, { ...docData, consultationId: consultationRef.id });
+        });
+        await Promise.all(documentPromises);
+      }
+
 
       if (data.treatments && data.treatments.length > 0 && consultationRef) {
         const prescriptionPromises = data.treatments
@@ -378,6 +478,39 @@ export function ConsultationForm() {
                         <FormItem><FormLabel>Lab Results</FormLabel><FormControl><Textarea placeholder="Summary of recent lab results" {...field} /></FormControl><FormMessage /></FormItem>
                     )}
                 />
+            </div>
+
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium">Associated Documents</h3>
+                <div className="space-y-4 rounded-lg border p-4">
+                    {documentFields.map((field, index) => (
+                        <div key={field.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                            <div className="flex items-center gap-3">
+                                <FileIcon className="h-5 w-5 text-muted-foreground"/>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-sm">{field.fileName}</span>
+                                    <div className="flex gap-2 mt-1">
+                                        {field.tags?.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                                    </div>
+                                </div>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeDocument(index)}
+                            >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    ))}
+                    <Button type="button" variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isUploading || !selectedPatientId}>
+                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                        {isUploading ? 'Uploading...' : 'Upload Document'}
+                    </Button>
+                    <Input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+                    {!selectedPatientId && <p className="text-xs text-center text-muted-foreground">Please select a patient to enable document uploads.</p>}
+                </div>
             </div>
 
             <div className="space-y-4">

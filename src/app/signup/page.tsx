@@ -131,11 +131,10 @@ export default function SignupPage() {
           firstName: firstName,
           lastName: lastName,
           email: newUser.email,
-          // Add default/placeholder values for other required fields
-          dateOfBirth: 'N/A',
-          gender: 'N/A',
-          contactNumber: 'N/A',
-          address: 'N/A',
+          dateOfBirth: '',
+          gender: '',
+          contactNumber: '',
+          address: '',
         };
         await setDocumentNonBlocking(patientDocRef, patientData, { merge: true });
       } else if (selectedRole === 'doctor') {
@@ -208,10 +207,10 @@ export default function SignupPage() {
           firstName: firstName,
           lastName: lastName,
           email: newUser.email,
-          dateOfBirth: 'N/A',
-          gender: 'N/A',
-          contactNumber: 'N/A',
-          address: 'N/A',
+          dateOfBirth: '',
+          gender: '',
+          contactNumber: '',
+          address: '',
         };
         await setDocumentNonBlocking(patientDocRef, patientData, { merge: true });
       }

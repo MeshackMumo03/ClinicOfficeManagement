@@ -438,7 +438,7 @@ export function ConsultationForm() {
                       <SelectContent>
                         {patients?.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
-                            {p.firstName} {p.lastName} (ID: {p.id})
+                            {p.firstName} {p.lastName}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -37,12 +37,27 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Badge } from "../ui/badge";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-
 const treatmentSchema = z.object({
   drugName: z.string().optional(),
   dosage: z.string().optional(),
   instructions: z.string().optional(),
 });
+
+// Define the document schema and types here, in the client component.
+export const DocumentTaggingInputSchema = z.object({
+  documentDataUri: z
+    .string()
+    .describe(
+      "A medical document (e.g., lab result, imaging report), as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+});
+export type DocumentTaggingInput = z.infer<typeof DocumentTaggingInputSchema>;
+
+export const DocumentTaggingOutputSchema = z.object({
+  tags: z.array(z.string()).describe('A list of 1-3 relevant tags for the document (e.g., "blood test", "x-ray", "MRI report").'),
+});
+export type DocumentTaggingOutput = z.infer<typeof DocumentTaggingOutputSchema>;
+
 
 const documentSchema = z.object({
   fileName: z.string(),

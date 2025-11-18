@@ -45,8 +45,10 @@ service cloud.firestore {
     match /users/{userId} {
       // Allow users to read their own profile and admins to read any.
       allow get: if isOwner(userId) || isAdmin();
-      // Users can create and update their own profile.
-      allow create, update: if isOwner(userId);
+      // A user can create their own profile. An admin can create any.
+      allow create: if isOwner(userId) || isAdmin();
+      // A user can update their own profile. An admin can update any.
+      allow update: if isOwner(userId) || isAdmin();
       // Only admins can see the full list of users.
       allow list: if isAdmin();
       // Allow admins to delete user documents.

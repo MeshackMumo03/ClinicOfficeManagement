@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader } from "../layout/loader";
 import { useEffect, useState, useRef } from "react";
 import { getDiagnosisSuggestion } from "@/lib/actions";
-import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
+import { audioTranscription } from "@/ai/flows/audio-transcription-flow";
 import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
@@ -202,7 +202,7 @@ export function ConsultationForm() {
     setIsTranscribing(true);
     try {
         const base64Audio = await blobToBase64(blob);
-        const result = await textToSpeech({ audioB64: base64Audio });
+        const result = await audioTranscription({ audioB64: base64Audio });
         
         if (result.transcript) {
             const currentNotes = form.getValues('notes');

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -31,9 +31,15 @@ import { Loader } from "../layout/loader";
 import { useEffect, useState, useRef } from "react";
 import { getDiagnosisSuggestion } from "@/lib/actions";
 import { textToSpeech } from "@/ai/flows/text-to-speech-flow";
-import { Sparkles, Mic, StopCircle, Loader2 } from "lucide-react";
+import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
+
+const treatmentSchema = z.object({
+  drugName: z.string().optional(),
+  dosage: z.string().optional(),
+  instructions: z.string().optional(),
+});
 
 const formSchema = z.object({
   patientId: z.string().min(1, "Patient selection is required."),
@@ -42,9 +48,7 @@ const formSchema = z.object({
   labResults: z.string().optional(),
   notes: z.string().optional(),
   diagnosis: z.string().optional(),
-  drugName: z.string().optional(),
-  dosage: z.string().optional(),
-  instructions: z.string().optional(),
+  treatments: z.array(treatmentSchema).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -94,10 +98,13 @@ export function ConsultationForm() {
       labResults: "",
       notes: "",
       diagnosis: "",
-      drugName: "",
-      dosage: "",
-      instructions: "",
+      treatments: [{ drugName: "", dosage: "", instructions: "" }],
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "treatments",
   });
 
   useEffect(() => {
@@ -238,16 +245,23 @@ export function ConsultationForm() {
 
       const consultationRef = await addDocumentNonBlocking(collection(firestore, "consultations"), consultationData);
 
-      if (data.drugName && consultationRef) {
-        const prescriptionData = {
-          consultationId: consultationRef.id,
-          drugName: data.drugName,
-          dosage: data.dosage,
-          frequency: data.instructions,
-          notes: data.instructions,
-        };
-        await addDocumentNonBlocking(collection(firestore, "prescriptions"), prescriptionData);
+      if (data.treatments && data.treatments.length > 0 && consultationRef) {
+        const prescriptionPromises = data.treatments
+            .filter(treatment => treatment.drugName) // Only create prescriptions if there's a drug name
+            .map(treatment => {
+                const prescriptionData = {
+                    consultationId: consultationRef.id,
+                    drugName: treatment.drugName,
+                    dosage: treatment.dosage,
+                    frequency: treatment.instructions, // Assuming instructions contain frequency
+                    notes: treatment.instructions,
+                };
+                return addDocumentNonBlocking(collection(firestore, "prescriptions"), prescriptionData);
+            });
+
+        await Promise.all(prescriptionPromises);
       }
+
 
       toast({
         title: "Consultation Saved",
@@ -419,48 +433,77 @@ export function ConsultationForm() {
 
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Treatment Plan</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="drugName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Medication</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Paracetamol" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="dosage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dosage</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 500mg" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="instructions"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Instructions & Other Treatments</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Detail prescription instructions, recommended lab tests, lifestyle changes, or specialist referrals." {...field} rows={4} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {fields.map((field, index) => (
+                <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
+                    {index > 0 && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => remove(index)}
+                        >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name={`treatments.${index}.drugName`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Medication</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Paracetamol" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`treatments.${index}.dosage`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Dosage</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 500mg" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name={`treatments.${index}.instructions`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Instructions & Other Treatments</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Detail prescription instructions, recommended lab tests, lifestyle changes, or specialist referrals."
+                            {...field}
+                            rows={3}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ drugName: "", dosage: "", instructions: "" })}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Treatment
+              </Button>
             </div>
+
 
             <div className="flex justify-end gap-4">
               <Button type="submit" disabled={form.formState.isSubmitting}>Save Consultation</Button>

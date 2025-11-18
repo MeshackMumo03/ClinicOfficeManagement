@@ -66,6 +66,7 @@ const documentSchema = z.object({
   downloadURL: z.string(),
   storagePath: z.string(),
   tags: z.array(z.string()).optional(),
+  consultationId: z.string().optional(), // Added to link document to consultation
 });
 
 const formSchema = z.object({
@@ -268,7 +269,7 @@ export function ConsultationForm() {
   const startRecording = async () => {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorderRef.current = new MediaRecorder(stream);
+        mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         audioChunksRef.current = [];
 
         mediaRecorderRef.current.ondataavailable = (event) => {
@@ -345,7 +346,6 @@ export function ConsultationForm() {
         notes: data.notes,
         diagnosis: data.diagnosis,
         prescriptionIds: [], // This will be populated by prescription creation
-        documentIds: data.documents?.map(doc => doc.storagePath) || [],
       };
 
       const consultationRef = await addDocumentNonBlocking(collection(firestore, "consultations"), consultationData);

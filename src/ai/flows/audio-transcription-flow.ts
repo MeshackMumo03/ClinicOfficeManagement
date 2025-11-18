@@ -42,6 +42,7 @@ const audioTranscriptionFlow = ai.defineFlow(
         {
           media: {
             url: `data:audio/webm;base64,${input.audioB64}`,
+            contentType: 'audio/webm',
           },
         },
       ],

@@ -10,7 +10,7 @@ import { Loader } from "@/components/layout/loader";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, CheckCircle, ShieldAlert } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
 import { EditUserDialog } from "@/components/admin/edit-user-dialog";
 
@@ -60,6 +60,16 @@ export default function AdminPage() {
     toast({
       title: "User Deletion Initiated",
       description: "The user document has been scheduled for deletion. Auth user must be deleted separately.",
+    });
+  };
+
+  const handleVerifyUser = (user: any) => {
+    if (!firestore) return;
+    const userDocRef = doc(firestore, "users", user.uid);
+    setDocumentNonBlocking(userDocRef, { verified: true }, { merge: true });
+    toast({
+      title: "User Verified",
+      description: `${user.name} has been verified and can now access the system.`,
     });
   };
 
@@ -101,6 +111,7 @@ export default function AdminPage() {
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden sm:table-cell">Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">UID</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -114,6 +125,23 @@ export default function AdminPage() {
                       <Badge className={cn("capitalize", roleColorClass[user.role] || 'bg-primary')}>
                         {user.role}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                        {(user.role === 'doctor' || user.role === 'receptionist') ? (
+                             user.verified ? (
+                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                    <CheckCircle className="mr-1 h-3 w-3" />
+                                    Verified
+                                </Badge>
+                            ) : (
+                                <Badge variant="destructive" className="bg-yellow-100 text-yellow-800">
+                                    <ShieldAlert className="mr-1 h-3 w-3" />
+                                    Unverified
+                                </Badge>
+                            )
+                        ) : (
+                            <Badge variant="outline">N/A</Badge>
+                        )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{user.uid}</TableCell>
                     <TableCell className="text-right">
@@ -132,6 +160,12 @@ export default function AdminPage() {
                                     Edit User
                                 </DropdownMenuItem>
                              </EditUserDialog>
+                             { (user.role === 'doctor' || user.role === 'receptionist') && !user.verified && (
+                                <DropdownMenuItem onClick={() => handleVerifyUser(user)}>
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Verify User
+                                </DropdownMenuItem>
+                             )}
                             <AlertDialogTrigger asChild>
                                 <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
                                     Delete User
@@ -166,3 +200,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 // Import necessary hooks, components, and Firebase functions.
@@ -101,6 +102,9 @@ export default function SignupPage() {
       );
       const newUser = userCredential.user;
 
+      // Patients are verified by default. Staff needs admin verification.
+      const isVerified = selectedRole === 'patient';
+
       // Save user role info to /users
       const userDocRef = doc(firestore, "users", newUser.uid);
       const userData: {
@@ -108,11 +112,13 @@ export default function SignupPage() {
         name: string,
         email: string | null,
         role: string,
+        verified: boolean,
       } = {
         uid: newUser.uid,
         name: name,
         email: newUser.email,
         role: selectedRole,
+        verified: isVerified,
       };
       await setDocumentNonBlocking(userDocRef, userData, { merge: true });
 
@@ -148,14 +154,12 @@ export default function SignupPage() {
 
       toast({
         title: "Sign Up Successful",
-        description: "Your account has been created.",
+        description: isVerified ? "Your account has been created." : "Your account has been created and is pending verification.",
       });
 
-      if (selectedRole === 'admin') {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+      // Redirect all users to the dashboard. The layout will handle the "pending" view.
+      router.push("/dashboard");
+
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -183,6 +187,7 @@ export default function SignupPage() {
       const [firstName, ...lastNameParts] = name.split(' ');
       const lastName = lastNameParts.join(' ');
 
+      const isVerified = role === 'patient';
 
       const userDocRef = doc(firestore, "users", newUser.uid);
       const userData = {
@@ -190,6 +195,7 @@ export default function SignupPage() {
         name: newUser.displayName,
         email: newUser.email,
         role: role,
+        verified: isVerified,
       };
 
       setDocumentNonBlocking(userDocRef, userData, { merge: true });
@@ -210,12 +216,8 @@ export default function SignupPage() {
         await setDocumentNonBlocking(patientDocRef, patientData, { merge: true });
       }
 
+      router.push("/dashboard");
 
-      if (role === 'admin') {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -343,3 +345,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    

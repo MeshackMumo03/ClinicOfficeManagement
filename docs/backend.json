@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Patient": {
@@ -344,6 +345,10 @@
         "doctorId": {
           "type": "string",
           "description": "Reference to the Doctor entity if the user is a doctor."
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Indicates if the user account (for doctors/receptionists) has been verified by an admin."
         }
       },
       "required": [
@@ -498,4 +503,5 @@
     "reasoning": "The Firestore structure is designed to ensure security, scalability, and ease of debugging, following the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). Authorization Independence is achieved through denormalization of authorization data. Path-based ownership and membership maps are used for access control.\n\n**Explanation of Authorization Independence and QAPs:**\n\n*   **Authorization Independence:**\n    *   Ownership: Patient-owned data (documents) are stored under `/users/{userId}/documents/{documentId}`, ensuring that the security rules can directly verify the user's ID against the document's path without needing to `get()` parent document data. The `patientId` is denormalized into the `Document` to also allow listing all documents for a `patientId`.\n    *   Membership: Not applicable for the primary entities but would be used if collaborative features (e.g., shared patient records between doctors) were implemented.\n*   **QAPs (Rules are not Filters):**\n    *   Structural Segregation: Data with different access requirements are stored in separate collections (e.g., `users`, `doctors`, `patients`).\n    *   Path-Based Ownership: Using `/users/{userId}/documents/{documentId}` ensures that listing documents requires knowing the `userId`, which can be checked against `request.auth.uid`."
   }
 }
+    
     

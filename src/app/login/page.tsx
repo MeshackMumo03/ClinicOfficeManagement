@@ -1,4 +1,5 @@
 
+
 "use client";
 
 // Import necessary hooks and components.
@@ -88,6 +89,8 @@ const handlePostLogin = async (db: any, user: User, router: any) => {
         if (userData.role === 'admin') {
             router.push("/admin");
         } else {
+            // For all other roles, verified or not, go to the main dashboard.
+            // The dashboard layout will handle showing the "pending" page if needed.
             router.push("/dashboard");
         }
     } else {
@@ -99,6 +102,7 @@ const handlePostLogin = async (db: any, user: User, router: any) => {
             name: user.displayName || 'New User',
             email: user.email,
             role: 'patient', // Default to patient
+            verified: true, // Patients are auto-verified
         };
         await setDoc(userDocRef, basicUserData, { merge: true });
         await ensureRoleDocumentExists(db, user, basicUserData);
@@ -120,7 +124,7 @@ export default function LoginPage() {
 
   // Redirect to dashboard if user is already logged in.
   useEffect(() => {
-    if (!isUserLoading && user) {
+    if (!isUserLoading && user && firestore) {
         handlePostLogin(firestore, user, router);
     }
   }, [user, isUserLoading, router, firestore]);
@@ -184,3 +188,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

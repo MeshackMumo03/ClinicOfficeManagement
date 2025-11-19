@@ -171,8 +171,9 @@ export function ConsultationForm() {
     };
 
     setIsUploading(true);
+
     try {
-        // 1. Upload to Firebase Storage
+        // Step 1: Upload the file to Firebase Storage
         const storage = getStorage();
         const storagePath = `documents/${selectedPatientId}/${Date.now()}_${file.name}`;
         const storageRef = ref(storage, storagePath);
@@ -188,6 +189,7 @@ export function ConsultationForm() {
             tags: [],
         };
         
+        // Step 2: Immediately add the document to the form state for UI responsiveness
         appendDocument(newDocument);
         
         toast({
@@ -195,18 +197,35 @@ export function ConsultationForm() {
             description: `${file.name} has been added. Generating AI tags...`,
         });
 
-        // 2. Get AI Tags
+        // Step 3: Trigger AI tagging in the background (fire and forget)
+        generateTagsInBackground(file, storagePath);
+
+    } catch (error) {
+        console.error("Error during file upload:", error);
+        toast({
+            variant: "destructive",
+            title: "Upload Failed",
+            description: "Could not upload the file. Please try again.",
+        });
+    } finally {
+        setIsUploading(false);
+        if(fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const generateTagsInBackground = async (file: File, storagePath: string) => {
+    try {
         const fileDataUri = await blobToBase64(file);
         const tagResult = await documentTagging({ documentDataUri: fileDataUri });
 
         if (tagResult.tags) {
-            // Find the document we just added and update its tags
+            // Find the document in the form state and update its tags
             const currentDocs = form.getValues('documents') || [];
             const docIndex = currentDocs.findIndex(doc => doc.storagePath === storagePath);
             if (docIndex !== -1) {
                 const updatedDocs = [...currentDocs];
                 updatedDocs[docIndex].tags = tagResult.tags;
-                form.setValue('documents', updatedDocs);
+                form.setValue('documents', updatedDocs, { shouldDirty: true }); // Use shouldDirty to mark form as changed
             }
             toast({
                 title: "AI Tags Generated",
@@ -214,15 +233,12 @@ export function ConsultationForm() {
             });
         }
     } catch (error) {
-        console.error("Error during file upload and tagging:", error);
+        console.error("Error during AI tagging:", error);
         toast({
             variant: "destructive",
-            title: "Processing Failed",
-            description: "Could not upload the file or generate tags. Please try again.",
+            title: "AI Tagging Failed",
+            description: `Could not generate tags for ${file.name}.`,
         });
-    } finally {
-        setIsUploading(false);
-        if(fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -663,3 +679,5 @@ export function ConsultationForm() {
     </Card>
   );
 }
+
+    

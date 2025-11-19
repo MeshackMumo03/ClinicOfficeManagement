@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { geminiProVision } from '@genkit-ai/google-genai';
 
 
 const AudioTranscriptionInputSchema = z.object({
@@ -37,7 +36,7 @@ const audioTranscriptionFlow = ai.defineFlow(
   },
   async (input) => {
     const llmResponse = await ai.generate({
-      model: geminiProVision,
+      model: 'googleai/gemini-pro-vision',
       prompt: [
         {
           text: 'Transcribe the following audio recording. The recording is from a doctor during a patient consultation. The transcription should be clean and accurate.',

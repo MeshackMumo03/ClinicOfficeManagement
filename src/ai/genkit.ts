@@ -1,8 +1,9 @@
+// import the Genkit and Google AI plugin libraries
+import { googleAI } from '@genkit-ai/googleai';
+import { genkit } from 'genkit';
 
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
-
+// configure a Genkit instance and export it
 export const ai = genkit({
   plugins: [googleAI()],
-  model: 'googleai/gemini-pro',
+  model: 'gemini-pro', // set default model
 });

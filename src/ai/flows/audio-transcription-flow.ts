@@ -40,12 +40,8 @@ const audioTranscriptionFlow = ai.defineFlow(
       model: gemini20Flash,
       prompt: [
         {
-          text: 'Transcribe the following audio recording. The recording is from a doctor during a patient consultation. The transcription should be clean and accurate.',
-        },
-        {
           media: {
             url: `data:audio/webm;base64,${input.audioB64}`,
-            contentType: 'audio/webm'
           },
         },
       ],

@@ -9,6 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { geminiProVision } from '@genkit-ai/google-genai';
 
 // Schemas are now defined in the client component, so we only need the function here.
 // We redefine lightweight schemas internally for validation within the flow.
@@ -47,7 +48,7 @@ const documentTaggingFlow = ai.defineFlow(
   async (input) => {
     const { output } = await prompt({
         ...input,
-    }, { model: 'googleai/gemini-pro-vision'});
+    }, { model: geminiProVision });
     return output!;
   }
 );

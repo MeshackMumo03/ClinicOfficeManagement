@@ -12,6 +12,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
+
 const AudioTranscriptionInputSchema = z.object({
   audioB64: z.string().describe("A Base64-encoded audio chunk."),
 });
@@ -35,7 +36,7 @@ const audioTranscriptionFlow = ai.defineFlow(
   },
   async (input) => {
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
+      model: 'googleai/gemini-pro-vision',
       prompt: [
         {
           text: 'Transcribe the following audio recording. The recording is from a doctor during a patient consultation. The transcription should be clean and accurate.',
@@ -43,7 +44,6 @@ const audioTranscriptionFlow = ai.defineFlow(
         {
           media: {
             url: `data:audio/webm;base64,${input.audioB64}`,
-            contentType: 'audio/webm',
           },
         },
       ],

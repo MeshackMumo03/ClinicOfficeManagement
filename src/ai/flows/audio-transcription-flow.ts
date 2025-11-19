@@ -10,7 +10,6 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'genkit';
 
 
@@ -37,7 +36,7 @@ const audioTranscriptionFlow = ai.defineFlow(
   },
   async (input) => {
     const llmResponse = await ai.generate({
-      model: googleAI.model('gemini-1.5-pro-latest'),
+      model: 'googleai/gemini-pro-vision',
       prompt: [
         {
           text: 'Transcribe the following audio recording. The recording is from a doctor during a patient consultation. The transcription should be clean and accurate.',
@@ -45,6 +44,7 @@ const audioTranscriptionFlow = ai.defineFlow(
         {
           media: {
             url: `data:audio/webm;base64,${input.audioB64}`,
+            contentType: 'audio/webm'
           },
         },
       ],

@@ -66,7 +66,6 @@ const documentSchema = z.object({
   downloadURL: z.string(),
   storagePath: z.string(),
   tags: z.array(z.string()).optional(),
-  consultationId: z.string().optional(), // Added to link document to consultation
 });
 
 const formSchema = z.object({
@@ -353,7 +352,7 @@ export function ConsultationForm() {
       toast({ variant: "destructive", title: "Error", description: "You must be logged in to save a consultation." });
       return;
     }
-
+  
     try {
       const consultationData = {
         patientId: data.patientId,
@@ -363,19 +362,26 @@ export function ConsultationForm() {
         diagnosis: data.diagnosis,
         prescriptionIds: [], // This will be populated by prescription creation
       };
-
+  
       const consultationRef = await addDocumentNonBlocking(collection(firestore, "consultations"), consultationData);
       
       // Save documents to the patient's subcollection
       if (data.documents && data.documents.length > 0 && consultationRef) {
         const documentPromises = data.documents.map(docData => {
             const docCollectionRef = collection(firestore, 'users', data.patientId, 'documents');
-            return addDocumentNonBlocking(docCollectionRef, { ...docData, consultationId: consultationRef.id });
+            const documentPayload = {
+              ...docData,
+              consultationId: consultationRef.id,
+              patientId: data.patientId,
+              uploadDateTime: new Date().toISOString(),
+              uploadedBy: user.uid,
+            };
+            return addDocumentNonBlocking(docCollectionRef, documentPayload);
         });
         await Promise.all(documentPromises);
       }
-
-
+  
+  
       if (data.treatments && data.treatments.length > 0 && consultationRef) {
         const prescriptionPromises = data.treatments
             .filter(treatment => treatment.drugName) // Only create prescriptions if there's a drug name
@@ -389,11 +395,11 @@ export function ConsultationForm() {
                 };
                 return addDocumentNonBlocking(collection(firestore, "prescriptions"), prescriptionData);
             });
-
+  
         await Promise.all(prescriptionPromises);
       }
-
-
+  
+  
       toast({
         title: "Consultation Saved",
         description: "The consultation details have been successfully saved.",
@@ -679,5 +685,3 @@ export function ConsultationForm() {
     </Card>
   );
 }
-
-    

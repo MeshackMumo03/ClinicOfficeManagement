@@ -196,8 +196,8 @@ export function ConsultationForm() {
             description: `${file.name} has been added. Generating AI tags...`,
         });
 
-        // Step 3: Trigger AI tagging in the background (fire and forget)
-        generateTagsInBackground(file, storagePath);
+        // Step 3: Trigger AI tagging in the background.
+        triggerAITagging(downloadURL, storagePath, file.name);
 
     } catch (error) {
         console.error("Error during file upload:", error);
@@ -207,15 +207,15 @@ export function ConsultationForm() {
             description: "Could not upload the file. Please try again.",
         });
     } finally {
+        // This is now safe because we are not awaiting the AI tagging.
         setIsUploading(false);
         if(fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const generateTagsInBackground = async (file: File, storagePath: string) => {
+  const triggerAITagging = async (documentUrl: string, storagePath: string, fileName: string) => {
     try {
-        const fileDataUri = await blobToBase64(file);
-        const tagResult = await documentTagging({ documentDataUri: fileDataUri });
+        const tagResult = await documentTagging({ documentUrl });
 
         if (tagResult.tags) {
             // Find the document in the form state and update its tags
@@ -224,11 +224,11 @@ export function ConsultationForm() {
             if (docIndex !== -1) {
                 const updatedDocs = [...currentDocs];
                 updatedDocs[docIndex].tags = tagResult.tags;
-                form.setValue('documents', updatedDocs, { shouldDirty: true }); // Use shouldDirty to mark form as changed
+                form.setValue('documents', updatedDocs, { shouldDirty: true });
             }
             toast({
                 title: "AI Tags Generated",
-                description: `Tags have been added to ${file.name}.`,
+                description: `Tags have been added to ${fileName}.`,
             });
         }
     } catch (error) {
@@ -236,7 +236,7 @@ export function ConsultationForm() {
         toast({
             variant: "destructive",
             title: "AI Tagging Failed",
-            description: `Could not generate tags for ${file.name}.`,
+            description: `Could not generate tags for ${fileName}.`,
         });
     }
   };

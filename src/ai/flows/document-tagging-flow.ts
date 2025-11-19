@@ -4,16 +4,14 @@
 /**
  * @fileOverview A GenAI flow for analyzing and tagging uploaded documents.
  * 
- * - documentTagging - A function that takes a document's data URI and suggests relevant tags.
+ * - documentTagging - A function that takes a document's public URL and suggests relevant tags.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-// Schemas are now defined in the client component, so we only need the function here.
-// We redefine lightweight schemas internally for validation within the flow.
 const DocumentTaggingInputSchema = z.object({
-  documentDataUri: z.string(),
+  documentUrl: z.string().url().describe('The public URL of the document to analyze.'),
 });
 
 const DocumentTaggingOutputSchema = z.object({
@@ -35,7 +33,7 @@ const prompt = ai.definePrompt({
     output: { schema: DocumentTaggingOutputSchema },
     prompt: `Analyze the following medical document and provide a list of 1-3 concise, relevant tags. Examples: "blood test", "x-ray", "MRI report", "pathology result", "patient summary".
   
-  Document: {{media url=documentDataUri}}`,
+  Document: {{media url=documentUrl}}`,
 });
   
 const documentTaggingFlow = ai.defineFlow(
@@ -45,9 +43,7 @@ const documentTaggingFlow = ai.defineFlow(
     outputSchema: DocumentTaggingOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt({
-        ...input,
-    }, { model: 'googleai/gemini-pro-vision' });
+    const { output } = await prompt(input, { model: 'googleai/gemini-pro-vision' });
     return output!;
   }
 );

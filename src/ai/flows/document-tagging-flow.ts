@@ -47,7 +47,7 @@ const documentTaggingFlow = ai.defineFlow(
   async (input) => {
     const { output } = await prompt({
         ...input,
-    }, { model: 'gemini-pro-vision'});
+    }, { model: 'googleai/gemini-pro-vision'});
     return output!;
   }
 );

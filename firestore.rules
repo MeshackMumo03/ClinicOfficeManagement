@@ -125,9 +125,5 @@ service cloud.firestore {
         allow create, update, delete: if isReceptionist() || isAdmin();
     }
 
-    match /users/{userId}/documents/{documentId} {
-      // Only the owner of the subcollection can access documents within it.
-      allow get, list, create, update, delete: if isOwner(userId);
-    }
   }
 }

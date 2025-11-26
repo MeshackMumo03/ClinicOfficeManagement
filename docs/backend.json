@@ -187,6 +187,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "documents": {
+          "type": "array",
+          "description": "An array of documents associated with the consultation.",
+          "items": {
+            "$ref": "#/entities/Document"
+          }
         }
       },
       "required": [

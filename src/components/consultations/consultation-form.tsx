@@ -172,7 +172,7 @@ export function ConsultationForm() {
     setIsUploading(true);
 
     try {
-        // Step 1: Upload the file to Firebase Storage
+        // Step 1: Upload the file to Firebase Storage. A doctor (user) can upload to a patient's folder.
         const storage = getStorage();
         const storagePath = `documents/${selectedPatientId}/${Date.now()}_${file.name}`;
         const storageRef = ref(storage, storagePath);
@@ -360,27 +360,11 @@ export function ConsultationForm() {
         consultationDateTime: new Date().toISOString(),
         notes: data.notes,
         diagnosis: data.diagnosis,
+        documents: data.documents || [], // Save the documents array to the consultation
         prescriptionIds: [], // This will be populated by prescription creation
       };
   
       const consultationRef = await addDocumentNonBlocking(collection(firestore, "consultations"), consultationData);
-      
-      // Save documents to the patient's subcollection
-      if (data.documents && data.documents.length > 0 && consultationRef) {
-        const documentPromises = data.documents.map(docData => {
-            const docCollectionRef = collection(firestore, 'users', data.patientId, 'documents');
-            const documentPayload = {
-              ...docData,
-              consultationId: consultationRef.id,
-              patientId: data.patientId,
-              uploadDateTime: new Date().toISOString(),
-              uploadedBy: user.uid,
-            };
-            return addDocumentNonBlocking(docCollectionRef, documentPayload);
-        });
-        await Promise.all(documentPromises);
-      }
-  
   
       if (data.treatments && data.treatments.length > 0 && consultationRef) {
         const prescriptionPromises = data.treatments

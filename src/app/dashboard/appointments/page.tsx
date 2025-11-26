@@ -23,12 +23,11 @@ import {
   DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
-import { collection, query, where, doc } from "firebase/firestore";
+import { collection, query, where, doc, deleteDoc } from "firebase/firestore";
 import { PlusCircle, ListFilter, MoreHorizontal } from "lucide-react";
 import { Loader } from "@/components/layout/loader";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
 import { EditAppointmentDialog } from "@/components/appointments/edit-appointment-dialog";
-import { doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 

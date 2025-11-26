@@ -27,6 +27,10 @@ import { collection, query, where, doc } from "firebase/firestore";
 import { PlusCircle, ListFilter, MoreHorizontal } from "lucide-react";
 import { Loader } from "@/components/layout/loader";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
+import { EditAppointmentDialog } from "@/components/appointments/edit-appointment-dialog";
+import { doc, deleteDoc } from 'firebase/firestore';
+import { useToast } from "@/hooks/use-toast";
+import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 /**
  * AppointmentsPage component to display and manage appointments.
@@ -35,6 +39,8 @@ import { NewAppointmentDialog } from "@/components/appointments/new-appointment-
 export default function AppointmentsPage() {
     const firestore = useFirestore();
     const { user, isUserLoading } = useUser();
+    const { toast } = useToast();
+
 
     const userDocRef = useMemoFirebase(
       () => (user ? doc(firestore, "users", user.uid) : null),
@@ -107,6 +113,24 @@ export default function AppointmentsPage() {
         }
         return "Loading...";
     }
+
+    const handleCancelAppointment = async (appointmentId: string) => {
+        if (!firestore) return;
+        try {
+            const appointmentRef = doc(firestore, 'appointments', appointmentId);
+            deleteDocumentNonBlocking(appointmentRef);
+            toast({
+                title: "Appointment Canceled",
+                description: "The appointment has been removed from the schedule.",
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Cancellation Failed',
+                description: 'Could not cancel the appointment. Please try again.',
+            });
+        }
+    };
     
     // Get unique statuses from appointments for the filter dropdown.
     const statuses = appointments ? Array.from(new Set(appointments.map((a: any) => a.status))) : [];
@@ -247,8 +271,10 @@ export default function AppointmentsPage() {
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem>Edit</DropdownMenuItem>
-                                    <DropdownMenuItem className="text-destructive">Cancel</DropdownMenuItem>
+                                    <EditAppointmentDialog appointment={appointment}>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Edit</DropdownMenuItem>
+                                    </EditAppointmentDialog>
+                                    <DropdownMenuItem className="text-destructive" onClick={() => handleCancelAppointment(appointment.id)}>Cancel</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </TableCell>

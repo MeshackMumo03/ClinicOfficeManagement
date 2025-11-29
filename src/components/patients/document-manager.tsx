@@ -27,9 +27,8 @@ export function DocumentManager({ patientId }: DocumentManagerProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const documentsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        // The path follows the security rule: /users/{userId}/documents/{documentId}
-        // Here, the userId is the patientId
+        if (!firestore || !patientId) return null;
+        // This path is correct according to the new firestore.rules
         return collection(firestore, 'users', patientId, 'documents');
     }, [firestore, patientId]);
 
@@ -41,20 +40,21 @@ export function DocumentManager({ patientId }: DocumentManagerProps) {
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file || !user) return;
+        if (!file || !user || !patientId) return;
 
         setIsUploading(true);
         const storage = getStorage();
-        // Use patientId in the storage path for organization
+        // The storage path must match the pattern in storage.rules
         const storagePath = `documents/${patientId}/${Date.now()}_${file.name}`;
         const storageRef = ref(storage, storagePath);
 
         try {
+            // 1. Upload file to Firebase Storage
             const uploadResult = await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(uploadResult.ref);
 
             const documentData = {
-                patientId: patientId, // Denormalized for potential cross-patient queries by staff
+                patientId: patientId, // Denormalized for potential queries
                 uploadDateTime: new Date().toISOString(),
                 fileName: file.name,
                 fileType: file.type,
@@ -64,6 +64,7 @@ export function DocumentManager({ patientId }: DocumentManagerProps) {
                 uploadedBy: user.uid,
             };
             
+            // 2. Create metadata document in Firestore at the correct, secured path
             const docCollectionRef = collection(firestore, 'users', patientId, 'documents');
             await addDocumentNonBlocking(docCollectionRef, documentData);
 
@@ -76,11 +77,10 @@ export function DocumentManager({ patientId }: DocumentManagerProps) {
             toast({
                 variant: "destructive",
                 title: "Upload Failed",
-                description: "Could not upload the file. Please try again.",
+                description: "Could not upload the file. Please check permissions and try again.",
             });
         } finally {
             setIsUploading(false);
-            // Reset the file input
             if(fileInputRef.current) fileInputRef.current.value = "";
         }
     };
@@ -105,6 +105,7 @@ export function DocumentManager({ patientId }: DocumentManagerProps) {
                     ref={fileInputRef}
                     className="hidden"
                     onChange={handleFileUpload}
+                    accept="image/*,application/pdf"
                 />
             </CardHeader>
             <CardContent>
@@ -162,3 +163,4 @@ export function DocumentManager({ patientId }: DocumentManagerProps) {
         </Card>
     );
 }
+

@@ -44,13 +44,6 @@
         "medicalHistory": {
           "type": "string",
           "description": "A summary of the patient's medical history."
-        },
-        "documentIds": {
-          "type": "array",
-          "description": "References to Documents uploaded by the patient. (Relationship: Patient 1:N Document)",
-          "items": {
-            "type": "string"
-          }
         }
       },
       "required": [
@@ -289,7 +282,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Document",
       "type": "object",
-      "description": "Represents a document uploaded by a patient.",
+      "description": "Represents a document uploaded by a patient or doctor.",
       "properties": {
         "id": {
           "type": "string",
@@ -297,16 +290,24 @@
         },
         "patientId": {
           "type": "string",
-          "description": "Reference to the Patient. (Relationship: Patient 1:N Document)"
+          "description": "The ID of the patient to whom this document belongs."
+        },
+        "uploadedBy": {
+          "type": "string",
+          "description": "The UID of the user who uploaded the document."
         },
         "uploadDateTime": {
           "type": "string",
           "description": "Date and time when the document was uploaded.",
           "format": "date-time"
         },
+        "fileName": {
+            "type": "string",
+            "description": "The original name of the uploaded file."
+        },
         "fileType": {
           "type": "string",
-          "description": "Type of the uploaded file (e.g., PDF, JPG)."
+          "description": "Type of the uploaded file (e.g., application/pdf, image/jpeg)."
         },
         "fileSize": {
           "type": "number",
@@ -315,15 +316,22 @@
         "storagePath": {
           "type": "string",
           "description": "Path to the document stored in Firebase Storage."
+        },
+        "downloadURL": {
+            "type": "string",
+            "description": "Publicly accessible URL to download the document."
         }
       },
       "required": [
         "id",
         "patientId",
+        "uploadedBy",
         "uploadDateTime",
+        "fileName",
         "fileType",
         "fileSize",
-        "storagePath"
+        "storagePath",
+        "downloadURL"
       ]
     },
     "User": {
@@ -493,7 +501,7 @@
           "schema": {
             "$ref": "#/backend/entities/Document"
           },
-          "description": "Stores documents uploaded by patients. Accessible only to the patient who uploaded them. Includes denormalized 'patientId' for list queries.",
+          "description": "Stores documents uploaded by patients or doctors. Accessible to the patient and authorized staff. The path is nested under the user (patient) to enforce security rules.",
           "params": [
             {
               "name": "userId",
@@ -512,3 +520,4 @@
 }
     
     
+

@@ -15,7 +15,6 @@ service cloud.firestore {
     }
 
     // Function to get the requesting user's role document data
-    // This can only be reliably used in `get`, `create`, `update`, `delete` rules, not `list`.
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -53,6 +52,17 @@ service cloud.firestore {
       allow list: if isAdmin();
       // Allow admins to delete user documents.
       allow delete: if isAdmin();
+
+      // Rules for the nested documents subcollection
+      match /documents/{documentId} {
+        // Allow a user to read their own documents.
+        // Allow a doctor to read any user's documents.
+        allow read: if isOwner(userId) || isDoctor();
+
+        // Allow a user to create/update/delete their own documents.
+        // Allow a doctor to create/update/delete any user's documents.
+        allow write: if isOwner(userId) || isDoctor();
+      }
     }
 
     match /patients/{patientId} {
@@ -127,3 +137,4 @@ service cloud.firestore {
 
   }
 }
+

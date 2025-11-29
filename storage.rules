@@ -3,17 +3,31 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Helper function to check if the requesting user has the 'doctor' role.
-    // It reads the user's document from the 'users' collection in Firestore.
-    function isDoctor() {
-      return get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'doctor';
+    // Helper functions to check user roles from their Firestore document.
+    function getUserRole() {
+      return get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    // Allow uploads to any patient's document folder.
+    function isDoctor() {
+      return getUserRole() == 'doctor';
+    }
+    
+    function isPatient() {
+        return getUserRole() == 'patient';
+    }
+
+    // Rules for patient-specific documents.
+    // The folder is named after the patient's UID.
     match /documents/{patientId}/{allPaths=**} {
-      // Allow read access if the user is the patient themselves OR if they are a doctor.
+      
+      // Allow reads if:
+      // 1. The requester is the owner of the folder (the patient themselves).
+      // 2. The requester is a doctor.
       allow read: if request.auth.uid == patientId || isDoctor();
-      // Allow write access (uploads) if the user is the patient themselves OR if they are a doctor.
+
+      // Allow writes (uploads/deletes) if:
+      // 1. The requester is the owner of the folder (the patient themselves).
+      // 2. The requester is a doctor.
       allow write: if request.auth.uid == patientId || isDoctor();
     }
   }

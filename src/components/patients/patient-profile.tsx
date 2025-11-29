@@ -1,13 +1,10 @@
-
 // Import the Tabs components from ShadCN and other necessary modules.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy } from "firebase/firestore";
 import { Loader } from "../layout/loader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Badge } from "../ui/badge";
 import { EditPatientDialog } from "./edit-patient-dialog";
-import { Button } from "../ui/button";
 import { DocumentManager } from "./document-manager";
 
 
@@ -165,3 +162,4 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
     </div>
   )
 }
+

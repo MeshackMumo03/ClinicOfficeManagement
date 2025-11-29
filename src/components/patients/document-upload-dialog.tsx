@@ -29,7 +29,7 @@ import { uploadDocumentAction } from '@/lib/document-actions';
 import { useUser } from '@/firebase';
 import type { PatientDocument } from '@/lib/document-actions';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_FILE_TYPES = [
     'application/pdf', 
     'application/msword', 
@@ -42,7 +42,7 @@ const ALLOWED_FILE_TYPES = [
 const uploadFormSchema = z.object({
   document: z
     .custom<FileList>((val) => val instanceof FileList && val.length > 0, 'A file is required.')
-    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max file size is 5MB.`)
+    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max file size is 10MB.`)
     .refine(
       (files) => ALLOWED_FILE_TYPES.includes(files?.[0]?.type),
       "Only PDF, Word, and image files (JPG, PNG) are allowed."
@@ -123,7 +123,7 @@ export function DocumentUploadDialog({ patientId, onClose, onDocumentUploaded }:
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            Select a document to upload for this patient. Max 5MB.
+            Select a document to upload for this patient. Max 10MB.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

@@ -1,3 +1,4 @@
+
 "use client"
 // Import necessary components from ShadCN, Lucide-React and firebase.
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -164,3 +165,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    

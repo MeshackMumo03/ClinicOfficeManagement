@@ -141,5 +141,27 @@ service cloud.firestore {
         allow create, update, delete: if isReceptionist() || isAdmin();
     }
 
+    match /conversations/{conversationId} {
+      // A user can read a conversation document if they are a participant.
+      allow get: if isSignedIn() && request.auth.uid in resource.data.participants;
+      // A user can list conversations if their UID is in the 'participants' array.
+      allow list: if isSignedIn() && request.auth.uid in query.filters.participants;
+
+      // Allow creating a conversation if the user is one of the participants.
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
+
+      // Allow updating (e.g. last message) if the user is a participant.
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      match /messages/{messageId} {
+        // A user can read/list messages if they are part of the parent conversation.
+        allow read, list: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
+        // A user can create a message if they are the sender and part of the conversation.
+        allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
+      }
+    }
+
   }
 }
+
+    

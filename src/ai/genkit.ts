@@ -5,5 +5,5 @@ import { genkit } from 'genkit';
 // configure a Genkit instance and export it
 export const ai = genkit({
   plugins: [googleAI()],
-  model: 'googleai/gemini-1.5-flash', // set default model
+  model: 'googleai/gemini-1.5-flash-latest', // set default model
 });

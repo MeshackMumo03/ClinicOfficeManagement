@@ -28,6 +28,57 @@ interface PatientProfileProps {
 }
 
 /**
+ * A component to display the consultation history for a patient.
+ * @param {object} props - The properties for the component.
+ * @param {string} props.patientId - The ID of the patient.
+ */
+function ConsultationHistory({ patientId }: { patientId: string }) {
+    const firestore = useFirestore();
+    const consultationsQuery = useMemoFirebase(() => {
+        if (!firestore || !patientId) return null;
+        return query(
+            collection(firestore, 'consultations'),
+            where('patientId', '==', patientId),
+            orderBy('consultationDateTime', 'desc')
+        );
+    }, [firestore, patientId]);
+
+    const { data: consultations, isLoading, error } = useCollection(consultationsQuery);
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-40"><Loader /></div>;
+    }
+
+    if (error) {
+        return <p className="text-destructive">Error loading consultation history: {error.message}</p>;
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Consultation History</CardTitle>
+                <CardDescription>A record of all past consultations for this patient.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {consultations && consultations.length > 0 ? (
+                    <ul className="space-y-4">
+                        {consultations.map((c: any) => (
+                            <li key={c.id} className="border-b pb-2">
+                                <p><strong>Date:</strong> {new Date(c.consultationDateTime).toLocaleDateString()}</p>
+                                <p><strong>Diagnosis:</strong> {c.diagnosis || 'N/A'}</p>
+                                <p><strong>Notes:</strong> {c.notes || 'No notes available.'}</p>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-muted-foreground">No consultation history found for this patient.</p>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+/**
  * InfoRow component to display a label and value pair.
  * @param {object} props - The properties for the component.
  * @param {string} props.label - The label for the information.
@@ -96,7 +147,7 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
         </TabsContent>
         {/* Consultation history tab content. */}
         <TabsContent value="consultation-history">
-            <p className="text-muted-foreground">Consultation history is temporarily disabled.</p>
+            <ConsultationHistory patientId={patient.id} />
         </TabsContent>
         <TabsContent value="documents">
             <DocumentManager patientId={patient.id} canManage={canManageDocs} />

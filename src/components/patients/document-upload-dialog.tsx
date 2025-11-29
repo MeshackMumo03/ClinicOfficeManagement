@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,9 +24,11 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Loader2, UploadCloud } from 'lucide-react';
-import { uploadDocumentAction } from '@/lib/document-actions';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import type { PatientDocument } from '@/lib/document-actions';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_FILE_TYPES = [
@@ -61,6 +62,7 @@ interface DocumentUploadDialogProps {
 export function DocumentUploadDialog({ patientId, onClose, onDocumentUploaded }: DocumentUploadDialogProps) {
   const { toast } = useToast();
   const { user } = useUser();
+  const firestore = useFirestore();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<UploadFormValues>({
@@ -75,39 +77,55 @@ export function DocumentUploadDialog({ patientId, onClose, onDocumentUploaded }:
 
   const onSubmit = async (values: UploadFormValues) => {
     setIsLoading(true);
-    if (!values.document || values.document.length === 0 || !user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'File or user information is missing.' });
+    if (!values.document || values.document.length === 0 || !user || !firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'File, user, or database information is missing.' });
         setIsLoading(false);
         return;
     }
     const file = values.document[0];
-    const formData = new FormData();
-    formData.append('document', file);
-    if (values.description) {
-        formData.append('description', values.description);
-    }
+    const storage = getStorage();
 
     try {
-      // Call the secure server action
-      const result = await uploadDocumentAction(patientId, user.uid, formData);
+      // 1. Upload file directly to Firebase Storage from the client
+      const storagePath = `documents/${patientId}/${Date.now()}_${file.name}`;
+      const fileStorageRef = ref(storage, storagePath);
+      const uploadResult = await uploadBytes(fileStorageRef, file, { contentType: file.type });
+      const downloadURL = await getDownloadURL(uploadResult.ref);
 
-      if (result.success && result.document) {
-         toast({
-          title: 'Document Uploaded',
-          description: `${file.name} is now ready for AI processing.`,
-        });
-        
-        // Read file as a data URI to pass to the AI tagging tool
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUri = reader.result as string;
-          onDocumentUploaded(result.document!, dataUri);
-        };
-        reader.readAsDataURL(file);
+      // 2. Create document metadata in Firestore
+      const documentsColRef = collection(firestore, 'users', patientId, 'documents');
+      const newDocData: Omit<PatientDocument, 'id'> = {
+        patientId,
+        fileName: file.name,
+        description: values.description || '',
+        storagePath: storagePath,
+        downloadURL,
+        uploadedBy: user.uid,
+        uploadDateTime: serverTimestamp(),
+        fileType: file.type,
+        tags: [],
+      };
+      
+      const docRef = await addDoc(documentsColRef, newDocData);
 
-      } else {
-         toast({ variant: 'destructive', title: 'Upload Failed', description: result.message });
-      }
+      const createdDocument: PatientDocument = {
+        id: docRef.id,
+        ...newDocData,
+        uploadDateTime: new Date().toISOString(),
+      };
+      
+      toast({
+        title: 'Document Uploaded',
+        description: `${file.name} is now ready for AI processing.`,
+      });
+      
+      // Read file as a data URI to pass to the AI tagging tool
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUri = reader.result as string;
+        onDocumentUploaded(createdDocument, dataUri);
+      };
+      reader.readAsDataURL(file);
 
     } catch (error: any) {
       console.error('Upload error:', error);

@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, SendHorizonal } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from "@/firebase";
-import { collection, doc, query, where, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
+import { collection, doc, query, where, addDoc, serverTimestamp, orderBy, getDocs } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
 import React, { useState, useEffect, useRef } from "react";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useRouter } from "next/navigation";
 
 
 /**
@@ -36,6 +37,15 @@ function useOtherParticipant(userId: string | null) {
     return userData;
 }
 
+interface Contact {
+    id: string;
+    name: string;
+    role: string;
+    photoURL?: string;
+    conversationId?: string;
+    lastMessage?: string;
+}
+
 
 /**
  * ChatPage component to facilitate communication with patients.
@@ -44,7 +54,9 @@ function useOtherParticipant(userId: string | null) {
 export default function ChatPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+  const router = useRouter();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -54,36 +66,106 @@ export default function ChatPage() {
     [user, firestore]
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  const userRole = userData?.role;
 
-  // --- 1. Fetch Conversations for the current user ---
+  // --- 1. Fetch all possible contacts (patients for staff, doctors for patients) ---
+  const contactsQuery = useMemoFirebase(() => {
+    if (!firestore || !userRole) return null;
+    if (userRole === 'patient') {
+        // Patients can message any doctor
+        return collection(firestore, "doctors");
+    }
+    if (userRole === 'doctor' || userRole === 'receptionist' || userRole === 'admin') {
+        // Staff can message any patient
+        return collection(firestore, "patients");
+    }
+    return null;
+  }, [firestore, userRole]);
+  const { data: allContactsData, isLoading: contactsLoading } = useCollection(contactsQuery);
+
+
+  // --- 2. Fetch Conversations for the current user ---
   const conversationsQuery = useMemoFirebase(
     () => user ? query(collection(firestore, "conversations"), where("participants", "array-contains", user.uid)) : null,
     [firestore, user]
   );
   const { data: conversations, isLoading: conversationsLoading } = useCollection(conversationsQuery);
-
-  // --- 2. Get the currently selected conversation ---
-  const selectedConversation = conversations?.find(c => c.id === selectedConversationId) || (conversations && conversations.length > 0 && !selectedConversationId ? conversations[0] : null);
   
-  // --- 3. Set the selected conversation ID from the first conversation ---
+  // --- 3. Combine contacts and conversations into a single list ---
+  const [mergedContacts, setMergedContacts] = useState<Contact[]>([]);
+  
   useEffect(() => {
-    if (!selectedConversationId && conversations && conversations.length > 0) {
-      setSelectedConversationId(conversations[0].id);
-    }
-  }, [conversations, selectedConversationId]);
+    if (!allContactsData || !conversations) return;
 
-  // --- 4. Fetch messages for the selected conversation ---
+    const contactMap = new Map<string, Contact>();
+
+    // Add all potential contacts
+    allContactsData.forEach((contactDoc: any) => {
+        const contactId = contactDoc.id;
+        const name = `${contactDoc.firstName || ''} ${contactDoc.lastName || ''}`.trim() || 'Unnamed User';
+        contactMap.set(contactId, {
+            id: contactId,
+            name: name,
+            role: userRole === 'patient' ? 'doctor' : 'patient', // The role of the contact relative to the user
+            photoURL: contactDoc.photoURL || `https://picsum.photos/seed/${contactId}/100/100`,
+        });
+    });
+
+    // Enhance contacts with existing conversation data
+    conversations.forEach((convo: any) => {
+        const otherUserId = convo.participants.find((p: string) => p !== user?.uid);
+        if (contactMap.has(otherUserId)) {
+            const existingContact = contactMap.get(otherUserId)!;
+            existingContact.conversationId = convo.id;
+            existingContact.lastMessage = convo.lastMessage;
+        }
+    });
+
+    setMergedContacts(Array.from(contactMap.values()));
+
+  }, [allContactsData, conversations, user?.uid, userRole]);
+
+  // --- 4. Select a conversation ---
+  useEffect(() => {
+    if (!selectedConversationId && selectedContact) {
+      setSelectedConversationId(selectedContact.conversationId || null);
+    }
+  }, [selectedContact, selectedConversationId]);
+  
+
+  // --- 5. Fetch messages for the selected conversation ---
   const messagesQuery = useMemoFirebase(
     () => selectedConversationId ? query(collection(firestore, `conversations/${selectedConversationId}/messages`), orderBy("timestamp", "asc")) : null,
     [firestore, selectedConversationId]
   );
   const { data: messages, isLoading: messagesLoading } = useCollection(messagesQuery);
   
-  // --- 5. Get the other participant's info ---
-  const otherParticipantId = selectedConversation?.participants.find((p: string) => p !== user?.uid);
-  const otherParticipant = useOtherParticipant(otherParticipantId);
-  
-  // --- 6. Handle sending a message ---
+
+  // --- 6. Handle selecting a contact and creating a conversation if needed ---
+  const handleSelectContact = async (contact: Contact) => {
+    setSelectedContact(contact);
+    if (contact.conversationId) {
+      setSelectedConversationId(contact.conversationId);
+    } else {
+      // No existing conversation, create one.
+      if (!user || !contact.id) return;
+      
+      const conversationData = {
+          participants: [user.uid, contact.id],
+          lastMessage: `Conversation started...`,
+          lastMessageTimestamp: serverTimestamp(),
+      };
+      
+      const newConvoRef = await addDoc(collection(firestore, 'conversations'), conversationData);
+      setSelectedConversationId(newConvoRef.id);
+      
+      // Update the contact in the local state with the new conversation ID
+      setMergedContacts(prev => prev.map(c => c.id === contact.id ? {...c, conversationId: newConvoRef.id} : c));
+    }
+  };
+
+
+  // --- 7. Handle sending a message ---
   const handleSendMessage = async () => {
     if (!messageText.trim() || !user || !selectedConversationId) return;
 
@@ -98,10 +180,7 @@ export default function ChatPage() {
     // Non-blocking write for optimistic UI update
     addDocumentNonBlocking(messagesColRef, messageData);
     
-    // Also update the lastMessage on the conversation
     const conversationDocRef = doc(firestore, "conversations", selectedConversationId);
-    // You might want a non-blocking update here too
-    // For now, let's keep it simple
     // updateDoc(conversationDocRef, { lastMessage: messageText, lastMessageTimestamp: serverTimestamp() });
 
     setMessageText(""); // Clear input
@@ -113,14 +192,14 @@ export default function ChatPage() {
   }, [messages]);
 
 
-  const isLoading = isUserLoading || isUserDataLoading || conversationsLoading;
+  const isLoading = isUserLoading || isUserDataLoading || contactsLoading || conversationsLoading;
 
   if (isLoading) {
     return <Loader />;
   }
   
-  const contactName = otherParticipant ? otherParticipant.name : "Loading...";
-  const contactRole = otherParticipant ? otherParticipant.role : 'User';
+  const contactName = selectedContact ? selectedContact.name : "Loading...";
+  const contactRole = selectedContact ? selectedContact.role : 'User';
 
 
   return (
@@ -140,30 +219,43 @@ export default function ChatPage() {
             <div className="p-4 border-b">
                 <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input type="search" placeholder={`Search conversations...`} className="pl-8" />
+                    <Input type="search" placeholder={`Search contacts...`} className="pl-8" />
                 </div>
             </div>
             {/* List of contacts. */}
             <div className="flex-1 overflow-y-auto">
                 <nav className="grid gap-1 p-2">
-                    {conversations && conversations.map((convo: any) => {
-                        const otherUserId = convo.participants.find((p: string) => p !== user?.uid);
-                        return <ConversationListItem key={convo.id} conversation={convo} otherUserId={otherUserId} selectedConversationId={selectedConversationId} onSelect={setSelectedConversationId} />
-                    })}
-                    {(!conversations || conversations.length === 0) && (
-                        <p className="p-4 text-sm text-muted-foreground">No conversations found.</p>
+                    {mergedContacts.map((contact) => (
+                        <Button
+                            key={contact.id}
+                            variant={selectedContact?.id === contact.id ? "secondary" : "ghost"}
+                            className="w-full justify-start gap-3 h-14"
+                            onClick={() => handleSelectContact(contact)}
+                        >
+                            <Avatar className="h-9 w-9">
+                                <AvatarImage data-ai-hint="person face" src={contact.photoURL} />
+                                <AvatarFallback>{getInitials(contact.name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col items-start text-left">
+                                <span className="font-medium">{contact.name}</span>
+                                <span className="text-xs text-muted-foreground truncate max-w-40">{contact.lastMessage || 'Click to start conversation...'}</span>
+                            </div>
+                        </Button>
+                    ))}
+                    {mergedContacts.length === 0 && (
+                        <p className="p-4 text-sm text-muted-foreground">No contacts found.</p>
                     )}
                 </nav>
             </div>
         </div>
         {/* Chat window section. */}
         <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full bg-muted/20">
-          {selectedConversation ? (
+          {selectedContact ? (
             <>
               {/* Header of the chat window with contact's avatar and name. */}
               <div className="p-4 border-b flex items-center gap-4">
                   <Avatar>
-                      <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${otherParticipant?.uid}/100/100`} />
+                      <AvatarImage data-ai-hint="person face" src={selectedContact?.photoURL} />
                       <AvatarFallback>{getInitials(contactName)}</AvatarFallback>
                   </Avatar>
                   <div>
@@ -181,7 +273,7 @@ export default function ChatPage() {
                         <div key={msg.id} className={`flex items-start gap-3 ${isSender ? 'justify-end' : ''}`}>
                             {!isSender && (
                                 <Avatar>
-                                    <AvatarImage data-ai-hint="professional person" src={`https://picsum.photos/seed/${otherParticipantId}/100/100`} />
+                                    <AvatarImage data-ai-hint="professional person" src={selectedContact?.photoURL} />
                                     <AvatarFallback>{getInitials(contactName)}</AvatarFallback>
                                 </Avatar>
                             )}
@@ -218,29 +310,11 @@ export default function ChatPage() {
           ) : (
             // Display a message if no conversation is selected.
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-muted-foreground">Select a conversation to start messaging.</p>
+              <p className="text-muted-foreground">Select a contact to start messaging.</p>
             </div>
           )}
         </div>
       </div>
     </div>
   );
-}
-
-function ConversationListItem({ conversation, otherUserId, selectedConversationId, onSelect }: any) {
-    const otherParticipant = useOtherParticipant(otherUserId);
-    const contactName = otherParticipant ? otherParticipant.name : "Loading...";
-
-    return (
-        <Button variant={selectedConversationId === conversation.id ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => onSelect(conversation.id)}>
-             <Avatar className="h-8 w-8">
-                <AvatarImage data-ai-hint="person face" src={`https://picsum.photos/seed/${otherUserId}/100/100`} />
-                <AvatarFallback>{getInitials(contactName)}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col items-start">
-                <span className="font-medium">{contactName}</span>
-                <span className="text-xs text-muted-foreground truncate max-w-40">{conversation.lastMessage || 'Click to view message...'}</span>
-            </div>
-        </Button>
-    )
 }

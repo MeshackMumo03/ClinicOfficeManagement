@@ -6,7 +6,7 @@ export const firebaseConfig = {
   authDomain: "clinicoffice-e0e88.firebaseapp.com",
   databaseURL: "https://clinicoffice-e0e88-default-rtdb.firebaseio.com",
   projectId: "clinicoffice-e0e88",
-  storageBucket: "clinicoffice-e0e88.appspot.com",
+  storageBucket: "clinicoffice-e0e88.firebasestorage.app",
   messagingSenderId: "283135977821",
   appId: "1:283135977821:web:1eb0bd7f006e3ad3f760b4"
 };

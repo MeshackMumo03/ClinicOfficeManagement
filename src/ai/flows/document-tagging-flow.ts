@@ -15,11 +15,11 @@ const DocumentTaggingInputSchema = z.object({
 });
 
 const DocumentTaggingOutputSchema = z.object({
-  tags: z.array(z.string()),
+  tags: z.array(z.string()).describe('A list of 1-3 relevant tags for the document (e.g., "blood test", "x-ray", "MRI report").'),
 });
 
-type DocumentTaggingInput = z.infer<typeof DocumentTaggingInputSchema>;
-type DocumentTaggingOutput = z.infer<typeof DocumentTaggingOutputSchema>;
+export type DocumentTaggingInput = z.infer<typeof DocumentTaggingInputSchema>;
+export type DocumentTaggingOutput = z.infer<typeof DocumentTaggingOutputSchema>;
 
 export async function documentTagging(
   input: DocumentTaggingInput
@@ -43,7 +43,9 @@ const documentTaggingFlow = ai.defineFlow(
     outputSchema: DocumentTaggingOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input, { model: 'googleai/gemini-pro-vision' });
+    const { output } = await prompt(input);
     return output!;
   }
 );
+
+    

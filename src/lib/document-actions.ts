@@ -2,7 +2,7 @@
 'use server';
 
 import { addDoc, collection, doc, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
-import { getDownloadURL, ref as storageRef, uploadBytes, deleteObject } from 'firebase/storage';
+// Correctly import only the necessary parts from the server config
 import { db, storage } from '@/firebase/config-server';
 import { revalidatePath } from 'next/cache';
 
@@ -46,14 +46,26 @@ export async function uploadDocumentAction(
   }
 
   try {
-    // 1. Upload file to a secure path in Firebase Storage
+    // 1. Upload file to Firebase Storage using the Admin SDK
+    const bucket = storage.bucket();
     const filePath = `documents/${patientId}/${Date.now()}_${file.name}`;
-    const fileStorageRef = storageRef(storage, filePath);
-    const uploadResult = await uploadBytes(fileStorageRef, file);
-    const downloadURL = await getDownloadURL(uploadResult.ref);
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    const fileUpload = bucket.file(filePath);
+    await fileUpload.save(fileBuffer, {
+      metadata: {
+        contentType: file.type,
+      },
+    });
+
+    // Get the public URL
+    const [downloadURL] = await fileUpload.getSignedUrl({
+        action: 'read',
+        expires: '03-09-2491' // Far-future expiration date
+    });
+
 
     // 2. Create document metadata record in Firestore
-    // Note: The collection path `/users/{patientId}/documents` matches our security rules
     const documentsColRef = collection(db, 'users', patientId, 'documents');
     const newDocData: Omit<PatientDocument, 'id'> = {
       patientId,
@@ -69,30 +81,22 @@ export async function uploadDocumentAction(
 
     const docRef = await addDoc(documentsColRef, newDocData);
 
-    // Construct a client-safe version of the document for immediate UI feedback
     const createdDocument: PatientDocument = {
       id: docRef.id,
       ...newDocData,
-      uploadDateTime: new Date().toISOString(), // Use client time for immediate display
+      uploadDateTime: new Date().toISOString(),
     };
     
-    // Revalidate the patient profile page to show the new document
     revalidatePath(`/dashboard/patients`);
 
     return { success: true, message: 'Document uploaded successfully.', document: createdDocument };
   } catch (error: any) {
     console.error('Error uploading document:', error);
-    // Provide more user-friendly error messages based on common Firebase errors
     switch (error.code) {
-        case 'storage/unauthorized':
-            return {
+        case 403: // Often permission denied from Storage
+             return {
                 success: false,
-                message: 'Permission Denied: Your security rules do not allow file uploads. Please contact your administrator.'
-            };
-        case 'storage/unknown':
-            return {
-                success: false,
-                message: "Firebase Storage Error: This is often a CORS configuration issue. Please ensure your app's domain is an allowed origin in your Google Cloud bucket's CORS settings."
+                message: 'Permission Denied: Your security rules do not allow file uploads. Please check your Firebase Storage rules.'
             };
         default:
             return { success: false, message: error.message || 'Failed to upload document due to a server error.' };
@@ -141,9 +145,11 @@ export async function deleteDocumentAction(patientId: string, documentId: string
     }
 
     try {
-        // 1. Delete file from Firebase Storage
-        const fileRef = storageRef(storage, storagePath);
-        await deleteObject(fileRef);
+        // 1. Delete file from Firebase Storage using Admin SDK
+        const bucket = storage.bucket();
+        const fileRef = bucket.file(storagePath);
+        await fileRef.delete();
+
 
         // 2. Delete document record from Firestore
         const docRef = doc(db, 'users', patientId, 'documents', documentId);
@@ -154,7 +160,7 @@ export async function deleteDocumentAction(patientId: string, documentId: string
     } catch (error: any) {
         console.error("Error deleting document:", error);
         // If file is already gone from storage, try to delete firestore doc anyway
-        if (error.code === 'storage/object-not-found') {
+        if (error.code === 404) { // Object not found
             try {
                 const docRef = doc(db, 'users', patientId, 'documents', documentId);
                 await deleteDoc(docRef);

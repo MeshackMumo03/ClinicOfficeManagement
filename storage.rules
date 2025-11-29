@@ -4,16 +4,20 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     // Helper functions to check user roles from their Firestore document.
+    function getUserData() {
+      return get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
     function getUserRole() {
-      return get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+      return getUserData().role;
     }
 
     function isDoctor() {
       return getUserRole() == 'doctor';
     }
     
-    function isPatient() {
-        return getUserRole() == 'patient';
+    function isReceptionist() {
+        return getUserRole() == 'receptionist';
     }
 
     // Rules for patient-specific documents.
@@ -22,13 +26,13 @@ service firebase.storage {
       
       // Allow reads if:
       // 1. The requester is the owner of the folder (the patient themselves).
-      // 2. The requester is a doctor.
-      allow read: if request.auth.uid == patientId || isDoctor();
+      // 2. The requester is a doctor or receptionist.
+      allow read: if request.auth.uid == patientId || isDoctor() || isReceptionist();
 
       // Allow writes (uploads/deletes) if:
       // 1. The requester is the owner of the folder (the patient themselves).
-      // 2. The requester is a doctor.
-      allow write: if request.auth.uid == patientId || isDoctor();
+      // 2. The requester is a doctor or receptionist.
+      allow write: if request.auth.uid == patientId || isDoctor() || isReceptionist();
     }
   }
 }

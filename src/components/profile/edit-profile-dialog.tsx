@@ -29,13 +29,16 @@ import { Input } from "@/components/ui/input";
 import { useFirestore } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { Pencil } from "lucide-react";
+import { Pencil, Loader2 } from "lucide-react";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useUser } from "@/firebase";
 
 // Define the shape of the user object, including optional role-specific fields
 type User = {
     uid: string;
     name: string;
     role: "admin" | "doctor" | "receptionist" | "patient";
+    verified?: boolean;
     photoURL?: string;
     registrationNumber?: string;
     workId?: string;
@@ -48,7 +51,7 @@ interface EditProfileDialogProps {
 // Update the schema to include optional role-specific fields
 const formSchema = z.object({
   name: z.string().min(1, "Name is required."),
-  photoURL: z.string().optional(),
+  photoURL: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   registrationNumber: z.string().optional(),
   workId: z.string().optional(),
 });
@@ -57,7 +60,9 @@ type FormData = z.infer<typeof formSchema>;
 
 export function EditProfileDialog({ user }: EditProfileDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -72,8 +77,20 @@ export function EditProfileDialog({ user }: EditProfileDialogProps) {
 
   const onSubmit = async (data: FormData) => {
     const userDocRef = doc(firestore, "users", user.uid);
+    
+    // Logic to reset verification status if critical info changes for doctors
+    const updateData: Partial<User> & { [key: string]: any } = { ...data };
+    if (user.role === 'doctor' && data.registrationNumber !== user.registrationNumber) {
+        updateData.verified = false;
+        toast({
+            title: "Re-verification Required",
+            description: "Your registration number changed. Your account is pending re-verification by an admin.",
+            variant: "default",
+        });
+    }
+
     try {
-        setDocumentNonBlocking(userDocRef, data, { merge: true });
+        setDocumentNonBlocking(userDocRef, updateData, { merge: true });
         toast({
             title: "Profile Updated",
             description: "Your profile has been successfully updated.",
@@ -88,12 +105,25 @@ export function EditProfileDialog({ user }: EditProfileDialogProps) {
     }
   };
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // In a real app, you'd upload the file and get a URL.
-    // Here, we'll just use a new placeholder image for demonstration.
-    const newImageId = Math.floor(Math.random() * 1000);
-    const newPhotoURL = `https://picsum.photos/seed/${newImageId}/200/200`;
-    form.setValue("photoURL", newPhotoURL);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !authUser) return;
+
+    setIsUploading(true);
+    const storage = getStorage();
+    const storagePath = `avatars/${authUser.uid}/${file.name}`;
+    const storageRef = ref(storage, storagePath);
+
+    try {
+      const uploadResult = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(uploadResult.ref);
+      form.setValue("photoURL", downloadURL);
+      toast({ title: "Image Uploaded", description: "Image is ready to be saved with your profile." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload the image." });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
 
@@ -128,24 +158,19 @@ export function EditProfileDialog({ user }: EditProfileDialogProps) {
                     </FormItem>
                 )}
                 />
-                <FormField
-                control={form.control}
-                name="photoURL"
-                render={({ field }) => (
-                    <FormItem>
+                <FormItem>
                     <FormLabel>Profile Picture</FormLabel>
                     <FormControl>
-                        <Input type="file" onChange={handleFileChange} />
+                        <Input type="file" onChange={handleFileChange} disabled={isUploading} />
                     </FormControl>
                     <FormMessage />
-                    {field.value && (
+                    {isUploading && <p className="text-sm text-muted-foreground mt-2">Uploading...</p>}
+                    {form.getValues('photoURL') && !isUploading &&(
                         <p className="text-sm text-muted-foreground mt-2">
-                            New photo preview will be visible after saving.
+                           New photo selected. Click Save to apply.
                         </p>
                     )}
-                    </FormItem>
-                )}
-                />
+                </FormItem>
 
                 {/* Conditionally render role-specific fields */}
                 {user.role === 'doctor' && (
@@ -154,7 +179,7 @@ export function EditProfileDialog({ user }: EditProfileDialogProps) {
                     name="registrationNumber"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Registration Number</FormLabel>
+                        <FormLabel>LSK Registration Number</FormLabel>
                         <FormControl>
                             <Input placeholder="Your registration number" {...field} />
                         </FormControl>
@@ -181,7 +206,11 @@ export function EditProfileDialog({ user }: EditProfileDialogProps) {
                 )}
             </div>
             <DialogFooter>
-              <Button type="submit">Save changes</Button>
+                <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
+                    {(form.formState.isSubmitting || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save changes
+                </Button>
             </DialogFooter>
           </form>
         </Form>

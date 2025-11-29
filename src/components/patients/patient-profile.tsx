@@ -103,6 +103,9 @@ function ConsultationHistory({ patientId }: { patientId: string }) {
  * @param {PatientProfileProps} props - The properties for the component.
  */
 export function PatientProfile({ patient, canManagePatients }: PatientProfileProps) {
+  // All staff can view documents, but only certain roles can upload/manage.
+  const canManageDocs = canManagePatients;
+
   return (
     <div>
         {/* Header with patient's name and ID. */}
@@ -150,7 +153,7 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
           <ConsultationHistory patientId={patient.id} />
         </TabsContent>
         <TabsContent value="documents">
-            <DocumentManager patientId={patient.id} />
+            <DocumentManager patientId={patient.id} canManage={canManageDocs} />
         </TabsContent>
         <TabsContent value="prescriptions">
           <p className="text-muted-foreground">Prescription records will be displayed here.</p>
@@ -162,4 +165,3 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
     </div>
   )
 }
-

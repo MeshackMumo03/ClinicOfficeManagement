@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service firebase.storage {
@@ -20,19 +21,29 @@ service firebase.storage {
         return getUserRole() == 'receptionist';
     }
 
+    function isAdmin() {
+      return getUserRole() == 'admin';
+    }
+
+    // Allow avatar uploads for any signed-in user to their own folder.
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if true; // Publicly readable
+      allow write: if request.auth.uid == userId;
+    }
+
     // Rules for patient-specific documents.
     // The folder is named after the patient's UID.
     match /documents/{patientId}/{allPaths=**} {
       
       // Allow reads if:
       // 1. The requester is the owner of the folder (the patient themselves).
-      // 2. The requester is a doctor or receptionist.
-      allow read: if request.auth.uid == patientId || isDoctor() || isReceptionist();
+      // 2. The requester is a doctor, receptionist, or admin.
+      allow read: if request.auth.uid == patientId || isDoctor() || isReceptionist() || isAdmin();
 
       // Allow writes (uploads/deletes) if:
       // 1. The requester is the owner of the folder (the patient themselves).
-      // 2. The requester is a doctor or receptionist.
-      allow write: if request.auth.uid == patientId || isDoctor() || isReceptionist();
+      // 2. The requester is a doctor, receptionist, or admin.
+      allow write: if request.auth.uid == patientId || isDoctor() || isReceptionist() || isAdmin();
     }
   }
 }

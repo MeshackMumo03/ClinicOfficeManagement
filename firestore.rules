@@ -57,7 +57,7 @@ service cloud.firestore {
       match /documents/{documentId} {
         // Allow a user to read their own documents.
         // Allow a doctor or receptionist to read any user's documents.
-        allow read: if isOwner(userId) || isDoctor() || isReceptionist();
+        allow read: if isOwner(userId) || isDoctor() || isReceptionist() || isAdmin();
 
         // Allow any authenticated user to write to their own or other's document subcollections
         // This is necessary for doctors/receptionists to upload on behalf of patients.
@@ -134,5 +134,3 @@ service cloud.firestore {
 
   }
 }
-
-    

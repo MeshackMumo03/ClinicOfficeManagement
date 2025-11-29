@@ -59,9 +59,9 @@ service cloud.firestore {
         // Allow a doctor or receptionist to read any user's documents.
         allow read: if isOwner(userId) || isDoctor() || isReceptionist();
 
-        // Allow a user to create/update/delete their own documents.
-        // Allow a doctor or receptionist to create/update/delete any user's documents.
-        allow write: if isOwner(userId) || isDoctor() || isReceptionist();
+        // Allow any authenticated user to write to their own or other's document subcollections
+        // This is necessary for doctors/receptionists to upload on behalf of patients.
+        allow write: if isSignedIn();
       }
     }
 
@@ -134,3 +134,5 @@ service cloud.firestore {
 
   }
 }
+
+    

@@ -110,9 +110,16 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Allow any signed-in user to read and write to the consultations collection.
-      // This is a broad rule to resolve the persistent permission error during development.
-      allow read, write: if request.auth != null;
+      // Staff can list and read any consultation.
+      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      // The specific patient or doctor involved can get the consultation. Staff can also get it.
+      allow get: if isSignedIn() && (
+          resource.data.patientId == request.auth.uid ||
+          resource.data.doctorId == request.auth.uid ||
+          isDoctor() || isReceptionist() || isAdmin()
+      );
+      // Only doctors and admins can create, update or delete consultations.
+      allow create, update, delete: if isDoctor() || isAdmin();
     }
 
     match /prescriptions/{prescriptionId} {

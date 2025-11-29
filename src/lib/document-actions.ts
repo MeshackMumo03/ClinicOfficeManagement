@@ -2,8 +2,8 @@
 'use server';
 
 import { addDoc, collection, doc, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
-// Correctly import only the necessary parts from the server config
-import { db, storage } from '@/firebase/config-server';
+import { getDownloadURL, ref as storageRef, uploadBytes, deleteObject } from 'firebase/storage';
+import { db, storage } from '@/firebase/config-client'; // Use the client-side config
 import { revalidatePath } from 'next/cache';
 
 // Define the shape of the document record in Firestore
@@ -46,24 +46,17 @@ export async function uploadDocumentAction(
   }
 
   try {
-    // 1. Upload file to Firebase Storage using the Admin SDK
-    const bucket = storage.bucket();
+    // 1. Upload file to Firebase Storage
     const filePath = `documents/${patientId}/${Date.now()}_${file.name}`;
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-
-    const fileUpload = bucket.file(filePath);
-    await fileUpload.save(fileBuffer, {
-      metadata: {
-        contentType: file.type,
-      },
+    const fileStorageRef = storageRef(storage, filePath);
+    
+    // Convert file to ArrayBuffer to pass to uploadBytes
+    const buffer = await file.arrayBuffer();
+    const uploadResult = await uploadBytes(fileStorageRef, buffer, {
+        contentType: file.type
     });
-
-    // Get the public URL
-    const [downloadURL] = await fileUpload.getSignedUrl({
-        action: 'read',
-        expires: '03-09-2491' // Far-future expiration date
-    });
-
+    
+    const downloadURL = await getDownloadURL(uploadResult.ref);
 
     // 2. Create document metadata record in Firestore
     const documentsColRef = collection(db, 'users', patientId, 'documents');
@@ -93,7 +86,7 @@ export async function uploadDocumentAction(
   } catch (error: any) {
     console.error('Error uploading document:', error);
     switch (error.code) {
-        case 403: // Often permission denied from Storage
+        case 'storage/unauthorized':
              return {
                 success: false,
                 message: 'Permission Denied: Your security rules do not allow file uploads. Please check your Firebase Storage rules.'
@@ -145,11 +138,9 @@ export async function deleteDocumentAction(patientId: string, documentId: string
     }
 
     try {
-        // 1. Delete file from Firebase Storage using Admin SDK
-        const bucket = storage.bucket();
-        const fileRef = bucket.file(storagePath);
-        await fileRef.delete();
-
+        // 1. Delete file from Firebase Storage
+        const fileRef = storageRef(storage, storagePath);
+        await deleteObject(fileRef);
 
         // 2. Delete document record from Firestore
         const docRef = doc(db, 'users', patientId, 'documents', documentId);
@@ -160,7 +151,7 @@ export async function deleteDocumentAction(patientId: string, documentId: string
     } catch (error: any) {
         console.error("Error deleting document:", error);
         // If file is already gone from storage, try to delete firestore doc anyway
-        if (error.code === 404) { // Object not found
+        if (error.code === 'storage/object-not-found') { // Object not found
             try {
                 const docRef = doc(db, 'users', patientId, 'documents', documentId);
                 await deleteDoc(docRef);

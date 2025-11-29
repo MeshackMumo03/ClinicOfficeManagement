@@ -110,13 +110,17 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Staff can list and read any consultation.
-      allow list: if isDoctor() || isReceptionist() || isAdmin();
-      // The specific patient or doctor involved can get the consultation. Staff can also get it.
+      // Allow any signed-in user to list consultations.
+      // The client-side queries are responsible for filtering to the correct user/role.
+      allow list: if isSignedIn();
+
+      // Staff can read any consultation.
+      allow read: if isDoctor() || isReceptionist() || isAdmin();
+
+      // The specific patient or doctor involved can get the consultation.
       allow get: if isSignedIn() && (
           resource.data.patientId == request.auth.uid ||
-          resource.data.doctorId == request.auth.uid ||
-          isDoctor() || isReceptionist() || isAdmin()
+          resource.data.doctorId == request.auth.uid
       );
       // Only doctors and admins can create, update or delete consultations.
       allow create, update, delete: if isDoctor() || isAdmin();

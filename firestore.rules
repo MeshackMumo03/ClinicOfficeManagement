@@ -61,7 +61,7 @@ service cloud.firestore {
 
         // Allow a user to create/update/delete their own documents.
         // Allow a doctor to create/update/delete any user's documents.
-        allow write: if isOwner(userId) || isDoctor();
+        allow write: if isOwner(userId) || isDoctor() || isReceptionist();
       }
     }
 
@@ -110,8 +110,8 @@ service cloud.firestore {
     match /consultations/{consultationId} {
         // Let staff and involved patient/doctor read.
         allow get: if isSignedIn() && (isDoctor() || isReceptionist() || isAdmin() || resource.data.patientId == request.auth.uid);
-        // Allow staff to list consultations.
-        allow list: if isDoctor() || isReceptionist() || isAdmin();
+        // Allow any signed in user to list consultations. Client query must filter.
+        allow list: if isSignedIn();
         // Only doctors and admins can create/update/delete.
         allow create, update, delete: if isDoctor() || isAdmin();
     }

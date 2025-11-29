@@ -112,7 +112,7 @@ service cloud.firestore {
     match /consultations/{consultationId} {
       // Staff can list and read any consultation.
       allow list, read: if isDoctor() || isReceptionist() || isAdmin();
-      // The specific patient or doctor involved can get the consultation. Staff can also get it.
+      // The specific patient or doctor involved can get the consultation.
       allow get: if isSignedIn() && (
           resource.data.patientId == request.auth.uid ||
           resource.data.doctorId == request.auth.uid

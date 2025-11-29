@@ -55,13 +55,15 @@ service cloud.firestore {
 
       // Rules for the nested documents subcollection
       match /documents/{documentId} {
-        // Allow a user to read their own documents.
-        // Allow a doctor or receptionist to read any user's documents.
-        allow read: if isOwner(userId) || isDoctor() || isReceptionist() || isAdmin();
+        // A user can read their own documents. Staff can read any document.
+        allow get, list: if isOwner(userId) || isDoctor() || isReceptionist() || isAdmin();
+        
+        // Let any authenticated user create a document.
+        // This is needed for patients to upload their own, and staff to upload on their behalf.
+        allow create: if isSignedIn();
 
-        // Allow any authenticated user to write to their own or other's document subcollections
-        // This is necessary for doctors/receptionists to upload on behalf of patients.
-        allow write: if isSignedIn();
+        // Only the owner, doctors, receptionists, or admins can update or delete.
+        allow update, delete: if isOwner(userId) || isDoctor() || isReceptionist() || isAdmin();
       }
     }
 

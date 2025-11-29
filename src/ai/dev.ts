@@ -1,8 +1,3 @@
 
-import { config } from 'dotenv';
-config();
-
-import '@/ai/flows/consultation-diagnosis-support.ts';
-import '@/ai/flows/audio-transcription-flow.ts';
-import '@/ai/flows/document-tagging-flow.ts';
-    
+// This file is intentionally left blank.
+// It was used for a development setup that is no longer required.

@@ -1,125 +1,83 @@
 
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, doc, updateDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection, query, orderBy, doc, deleteDoc } from "firebase/firestore";
+import { getStorage, ref, deleteObject } from "firebase/storage";
 import { Loader } from "../layout/loader";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Upload, File, Download, Loader2, Sparkles, X } from "lucide-react";
+import { Upload, File, Download, Sparkles, X, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { documentTagging } from "@/ai/flows/document-tagging-flow";
 import { Badge } from "../ui/badge";
+import { DocumentUploadDialog } from "./document-upload-dialog";
+import { AiTaggingTool } from "./ai-tagging-tool";
+import type { PatientDocument } from "@/lib/document-actions";
+import { deleteDocumentAction } from "@/lib/document-actions";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog";
 
 interface DocumentManagerProps {
     patientId: string;
     canManage: boolean;
 }
 
+// State to track which document is being prepared for AI tagging
+interface TaggingState {
+    document: PatientDocument;
+    dataUri: string;
+}
+
 export function DocumentManager({ patientId, canManage }: DocumentManagerProps) {
     const firestore = useFirestore();
-    const { user } = useUser();
     const { toast } = useToast();
-
-    const [isUploading, setIsUploading] = useState(false);
-    const [isTagging, setIsTagging] = useState<string | null>(null); // Store the ID of the document being tagged
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+    const [taggingState, setTaggingState] = useState<TaggingState | null>(null);
 
     const documentsQuery = useMemoFirebase(() => {
         if (!firestore || !patientId) return null;
-        return collection(firestore, 'users', patientId, 'documents');
+        // The path MUST match the security rules: /users/{userId}/documents/{documentId}
+        return query(collection(firestore, 'users', patientId, 'documents'), orderBy('uploadDateTime', 'desc'));
     }, [firestore, patientId]);
 
-    const { data: documents, isLoading } = useCollection(documentsQuery);
+    const { data: documents, isLoading } = useCollection<PatientDocument>(documentsQuery);
 
-    const handleFileSelect = () => {
-        fileInputRef.current?.click();
+    const handleDocumentUploaded = (document: PatientDocument, dataUri: string) => {
+        setIsUploadDialogOpen(false);
+        setTaggingState({ document, dataUri });
     };
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file || !user || !patientId) return;
+    const handleTagsApplied = () => {
+        setTaggingState(null); // Close the tagging tool
+        toast({ title: 'Success', description: 'Document processing is complete.' });
+    };
 
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            toast({
-                variant: "destructive",
-                title: "File Too Large",
-                description: "The maximum file size is 5MB.",
-            });
+    const handleDeleteDocument = async (docToDelete: PatientDocument) => {
+        if (!patientId || !docToDelete.id || !docToDelete.storagePath) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Invalid document data for deletion.' });
             return;
         }
 
-        setIsUploading(true);
-        const storage = getStorage();
-        const storagePath = `documents/${patientId}/${Date.now()}_${file.name}`;
-        const storageRef = ref(storage, storagePath);
+        const result = await deleteDocumentAction(patientId, docToDelete.id, docToDelete.storagePath);
 
-        try {
-            const uploadResult = await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(uploadResult.ref);
-
-            const documentData = {
-                patientId: patientId,
-                uploadDateTime: new Date().toISOString(),
-                fileName: file.name,
-                fileType: file.type,
-                fileSize: file.size,
-                storagePath: storagePath,
-                downloadURL: downloadURL,
-                uploadedBy: user.uid,
-                tags: [], // Initialize with empty tags
-            };
-            
-            const docCollectionRef = collection(firestore, 'users', patientId, 'documents');
-            const newDocRef = await addDocumentNonBlocking(docCollectionRef, documentData);
-
-            toast({
-                title: "Upload Successful",
-                description: `${file.name} has been uploaded.`,
-            });
-
-            // Trigger AI tagging
-            if (newDocRef) {
-                handleAiTagging(newDocRef.id, downloadURL);
-            }
-
-        } catch (error) {
-            console.error("Error uploading file:", error);
-            toast({
-                variant: "destructive",
-                title: "Upload Failed",
-                description: "Could not upload the file. Please check permissions and try again.",
-            });
-        } finally {
-            setIsUploading(false);
-            if(fileInputRef.current) fileInputRef.current.value = "";
+        if (result.success) {
+            toast({ title: 'Document Deleted', description: result.message });
+        } else {
+            toast({ variant: 'destructive', title: 'Deletion Failed', description: result.message });
         }
     };
-
-    const handleAiTagging = async (docId: string, docUrl: string) => {
-        setIsTagging(docId);
-        try {
-            const result = await documentTagging({ documentUrl: docUrl });
-            if (result.tags && firestore) {
-                const docRef = doc(firestore, 'users', patientId, 'documents', docId);
-                await updateDoc(docRef, { tags: result.tags });
-                toast({
-                    title: "AI Tagging Complete",
-                    description: "Relevant tags have been automatically added to the document.",
-                });
-            }
-        } catch (error) {
-            console.error("AI Tagging Error:", error);
-            // Don't show a toast for this, as it's a background enhancement
-        } finally {
-            setIsTagging(null);
-        }
-    }
 
 
     return (
@@ -130,44 +88,42 @@ export function DocumentManager({ patientId, canManage }: DocumentManagerProps) 
                     <CardDescription>Upload and manage patient-related documents.</CardDescription>
                 </div>
                 {canManage && (
-                    <>
-                        <Button onClick={handleFileSelect} disabled={isUploading}>
-                            {isUploading ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Upload className="mr-2 h-4 w-4" />
-                            )}
-                            Upload Document
-                        </Button>
-                        <Input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            onChange={handleFileUpload}
-                            accept="image/*,application/pdf,.doc,.docx"
-                        />
-                    </>
+                    <Button onClick={() => setIsUploadDialogOpen(true)}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Document
+                    </Button>
                 )}
             </CardHeader>
             <CardContent>
+                {taggingState && (
+                    <AiTaggingTool
+                        documentId={taggingState.document.id}
+                        documentName={taggingState.document.fileName}
+                        documentDataUri={taggingState.dataUri}
+                        patientId={patientId}
+                        onTagsApplied={handleTagsApplied}
+                        onSkip={handleTagsApplied}
+                    />
+                )}
+
                 {isLoading ? (
                     <div className="flex justify-center items-center h-40">
                          <Loader />
                     </div>
                 ) : (
-                    <div className="border rounded-lg">
+                    <div className="border rounded-lg mt-4">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>File Name</TableHead>
                                     <TableHead>Tags</TableHead>
-                                    <TableHead className="hidden md:table-cell">Upload Date</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
+                                    <TableHead className="hidden md:table-cell">Date</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {documents && documents.length > 0 ? (
-                                    documents.map((docData: any) => (
+                                    documents.map((docData) => (
                                         <TableRow key={docData.id}>
                                             <TableCell className="font-medium flex items-center gap-2">
                                                 <File className="h-4 w-4 text-muted-foreground" />
@@ -175,34 +131,55 @@ export function DocumentManager({ patientId, canManage }: DocumentManagerProps) 
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-wrap gap-1">
-                                                    {isTagging === docData.id ? (
-                                                        <Badge variant="outline" className="animate-pulse">
-                                                            <Sparkles className="mr-1 h-3 w-3" />
-                                                            AI Tagging...
-                                                        </Badge>
-                                                    ) : (
-                                                        docData.tags?.map((tag: string) => (
+                                                    {(docData.tags || []).length > 0 ? (
+                                                        docData.tags.map((tag: string) => (
                                                             <Badge key={tag} variant="secondary">{tag}</Badge>
                                                         ))
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">No tags</span>
                                                     )}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="hidden md:table-cell">
                                                 {new Date(docData.uploadDateTime).toLocaleDateString()}
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right space-x-2">
                                                 <Button variant="outline" size="sm" asChild>
                                                     <a href={docData.downloadURL} target="_blank" rel="noopener noreferrer">
                                                         <Download className="mr-2 h-4 w-4" />
-                                                        Download
+                                                        View
                                                     </a>
                                                 </Button>
+                                                {canManage && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="destructive" size="sm">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Delete
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    This will permanently delete the document "{docData.fileName}". This action cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteDocument(docData)} className="bg-destructive hover:bg-destructive/90">
+                                                                    Confirm Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">
+                                        <TableCell colSpan={4} className="h-24 text-center">
                                             No documents found.
                                         </TableCell>
                                     </TableRow>
@@ -212,6 +189,14 @@ export function DocumentManager({ patientId, canManage }: DocumentManagerProps) 
                     </div>
                 )}
             </CardContent>
+
+             {isUploadDialogOpen && (
+                <DocumentUploadDialog
+                    patientId={patientId}
+                    onClose={() => setIsUploadDialogOpen(false)}
+                    onDocumentUploaded={handleDocumentUploaded}
+                />
+            )}
         </Card>
     );
 }

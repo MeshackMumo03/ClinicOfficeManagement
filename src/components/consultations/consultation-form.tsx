@@ -25,14 +25,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "../layout/loader";
 import { useEffect, useState, useRef } from "react";
 import { getDiagnosisSuggestion } from "@/lib/actions";
 import { audioTranscription } from "@/ai/flows/audio-transcription-flow";
-import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2, Upload, File, Download } from "lucide-react";
+import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 const treatmentSchema = z.object({
@@ -41,17 +40,6 @@ const treatmentSchema = z.object({
   instructions: z.string().optional(),
 });
 
-const documentSchema = z.object({
-    id: z.string(),
-    patientId: z.string(),
-    uploadedBy: z.string(),
-    uploadDateTime: z.string(),
-    fileName: z.string(),
-    fileType: z.string(),
-    fileSize: z.number(),
-    storagePath: z.string(),
-    downloadURL: z.string(),
-});
 
 const formSchema = z.object({
   patientId: z.string().min(1, "Patient selection is required."),
@@ -61,7 +49,6 @@ const formSchema = z.object({
   notes: z.string().optional(),
   diagnosis: z.string().optional(),
   treatments: z.array(treatmentSchema).optional(),
-  documents: z.array(documentSchema).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -73,8 +60,6 @@ export function ConsultationForm() {
   const { toast } = useToast();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -115,18 +100,12 @@ export function ConsultationForm() {
       notes: "",
       diagnosis: "",
       treatments: [{ drugName: "", dosage: "", instructions: "" }],
-      documents: [],
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "treatments",
-  });
-
-  const { fields: documentFields, append: appendDocument, remove: removeDocument } = useFieldArray({
-      control: form.control,
-      name: "documents"
   });
 
   const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -244,62 +223,6 @@ export function ConsultationForm() {
     }
   }
 
-  const handleFileSelect = () => {
-    if (!selectedPatientId) {
-        toast({
-            variant: "destructive",
-            title: "Patient Not Selected",
-            description: "Please select a patient before uploading a document.",
-        });
-        return;
-    }
-    fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user || !selectedPatientId) return;
-
-    setIsUploading(true);
-    const storage = getStorage();
-    const storagePath = `documents/${selectedPatientId}/${Date.now()}_${file.name}`;
-    const storageRef = ref(storage, storagePath);
-
-    try {
-        const uploadResult = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-
-        const newDocument = {
-            id: doc(collection(firestore, "dummy")).id, // Generate a unique ID
-            patientId: selectedPatientId,
-            uploadedBy: user.uid,
-            uploadDateTime: new Date().toISOString(),
-            fileName: file.name,
-            fileType: file.type,
-            fileSize: file.size,
-            storagePath: storagePath,
-            downloadURL: downloadURL,
-        };
-        
-        appendDocument(newDocument);
-
-        toast({
-            title: "Upload Successful",
-            description: `${file.name} is attached and will be saved with the consultation.`,
-        });
-    } catch (error) {
-        console.error("Error uploading file:", error);
-        toast({
-            variant: "destructive",
-            title: "Upload Failed",
-            description: "Could not upload the file. Please check permissions and try again.",
-        });
-    } finally {
-        setIsUploading(false);
-        if(fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
 
   const onSubmit = async (data: FormData) => {
     if (!user) {
@@ -314,7 +237,7 @@ export function ConsultationForm() {
         consultationDateTime: new Date().toISOString(),
         notes: data.notes,
         diagnosis: data.diagnosis,
-        documents: data.documents || [],
+        // The `documents` field is no longer managed here. It's handled in the Patient Profile.
         prescriptionIds: [], // This will be populated by prescription creation
       };
   
@@ -389,11 +312,6 @@ export function ConsultationForm() {
                     <Select onValueChange={(value) => {
                       field.onChange(value);
                       setSelectedPatientId(value);
-                      form.reset({
-                          ...form.getValues(),
-                          documents: [],
-                          patientId: value,
-                      })
                     }} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -512,41 +430,6 @@ export function ConsultationForm() {
             </div>
             
             <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Attach Documents</h3>
-                    <Button type="button" variant="outline" size="sm" onClick={handleFileSelect} disabled={isUploading || !selectedPatientId}>
-                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                        Upload File
-                    </Button>
-                    <Input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={handleFileUpload}
-                        accept="image/*,application/pdf"
-                    />
-                </div>
-                <div className="space-y-2">
-                    {documentFields.map((docField, index) => (
-                        <div key={docField.id} className="flex items-center justify-between p-2 border rounded-md">
-                            <div className="flex items-center gap-2">
-                                <File className="h-5 w-5 text-muted-foreground" />
-                                <a href={docField.downloadURL} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline">
-                                    {docField.fileName}
-                                </a>
-                            </div>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeDocument(index)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                        </div>
-                    ))}
-                    {documentFields.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">No documents attached.</p>
-                    )}
-                </div>
-            </div>
-
-            <div className="space-y-4">
               <h3 className="text-lg font-medium">Treatment Plan</h3>
               {fields.map((field, index) => (
                 <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
@@ -621,7 +504,7 @@ export function ConsultationForm() {
 
 
             <div className="flex justify-end gap-4">
-              <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>Save Consultation</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>Save Consultation</Button>
               <Button variant="outline" type="button">Print/Export PDF</Button>
             </div>
           </form>
@@ -630,5 +513,3 @@ export function ConsultationForm() {
     </Card>
   );
 }
-
-    

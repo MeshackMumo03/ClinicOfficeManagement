@@ -31,8 +31,13 @@ import { Loader } from "../layout/loader";
 import { useEffect, useState, useRef } from "react";
 import { getDiagnosisSuggestion } from "@/lib/actions";
 import { audioTranscription } from "@/ai/flows/audio-transcription-flow";
-import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2 } from "lucide-react";
+import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2, Upload, File as FileIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { DocumentUploadDialog } from "../patients/document-upload-dialog";
+import { AiTaggingTool } from "../patients/ai-tagging-tool";
+import type { PatientDocument } from "@/lib/document-actions";
+import { Badge } from "../ui/badge";
+
 
 const treatmentSchema = z.object({
   drugName: z.string().optional(),
@@ -53,6 +58,11 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+// State to track which document is being prepared for AI tagging
+interface TaggingState {
+    document: PatientDocument;
+    dataUri: string;
+}
 
 export function ConsultationForm() {
   const { user, isUserLoading } = useUser();
@@ -67,6 +77,11 @@ export function ConsultationForm() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
+
+  // Document management state
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [taggingState, setTaggingState] = useState<TaggingState | null>(null);
+  const [consultationDocs, setConsultationDocs] = useState<PatientDocument[]>([]);
 
 
   const userDocRef = useMemoFirebase(
@@ -237,7 +252,8 @@ export function ConsultationForm() {
         consultationDateTime: new Date().toISOString(),
         notes: data.notes,
         diagnosis: data.diagnosis,
-        // The `documents` field is no longer managed here. It's handled in the Patient Profile.
+        // The `documents` field is now managed here.
+        documents: consultationDocs,
         prescriptionIds: [], // This will be populated by prescription creation
       };
   
@@ -266,6 +282,7 @@ export function ConsultationForm() {
         description: "The consultation details have been successfully saved.",
       });
       form.reset();
+      setConsultationDocs([]);
       setSelectedPatientId(null);
     } catch (error) {
       console.error("Error saving consultation:", error);
@@ -276,6 +293,31 @@ export function ConsultationForm() {
       });
     }
   };
+
+  const handleDocumentUploaded = (document: PatientDocument, dataUri: string) => {
+    setIsUploadDialogOpen(false);
+    setTaggingState({ document, dataUri });
+    // Add the document to the local state immediately
+    setConsultationDocs(prevDocs => [...prevDocs, document]);
+  };
+
+  const handleTagsApplied = () => {
+      // Find the document in state and update its tags.
+      if (taggingState) {
+          setConsultationDocs(prevDocs => prevDocs.map(doc => 
+              doc.id === taggingState.document.id ? { ...doc, tags: taggingState.document.tags } : doc
+          ));
+      }
+      setTaggingState(null); // Close the tagging tool
+      toast({ title: 'Success', description: 'Document processing is complete.' });
+  };
+
+  const removeDocument = (docId: string) => {
+      // Note: This only removes it from the current consultation form.
+      // It does not delete it from storage, as it might have been saved elsewhere.
+      setConsultationDocs(prevDocs => prevDocs.filter(doc => doc.id !== docId));
+  }
+
 
   const isLoading = isUserLoading || isUserDataLoading || patientsLoading;
   if (isLoading) {
@@ -312,6 +354,7 @@ export function ConsultationForm() {
                     <Select onValueChange={(value) => {
                       field.onChange(value);
                       setSelectedPatientId(value);
+                      setConsultationDocs([]); // Clear docs when patient changes
                     }} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -355,161 +398,213 @@ export function ConsultationForm() {
                 </div>
               )}
             </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Consultation Details</h3>
-                <FormField
-                    control={form.control} name="symptoms"
-                    render={({ field }) => (
-                        <FormItem><FormLabel>Symptoms</FormLabel><FormControl><Textarea placeholder="Patient's reported symptoms" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control} name="examFindings"
-                    render={({ field }) => (
-                        <FormItem><FormLabel>Exam Findings</FormLabel><FormControl><Textarea placeholder="Physical examination findings" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control} name="labResults"
-                    render={({ field }) => (
-                        <FormItem><FormLabel>Lab Results</FormLabel><FormControl><Textarea placeholder="Summary of recent lab results" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}
-                />
-            </div>
-
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Diagnosis</h3>
-                    <Button type="button" variant="outline" size="sm" onClick={handleGetAiSuggestion} disabled={isAiLoading || !selectedPatientId}>
-                        {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Get AI Suggestion
-                    </Button>
-                </div>
-              <FormField
-                control={form.control}
-                name="diagnosis"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Diagnosis</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter diagnosis..." {...field} rows={4} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Doctor's Notes</h3>
-                <Button type="button" variant={isRecording ? "destructive" : "outline"} size="sm" onClick={isRecording ? stopRecording : startRecording} disabled={isTranscribing}>
-                    {isRecording ? <><StopCircle className="mr-2 h-4 w-4" />Stop</> : isTranscribing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Transcribing...</> : <><Mic className="mr-2 h-4 w-4" />Record Audio</>}
-                </Button>
-              </div>
-               {isTranscribing && (
-                    <Alert>
-                        <AlertTitle>Processing Audio</AlertTitle>
-                        <AlertDescription>Your recording is being transcribed. This may take a moment...</AlertDescription>
-                    </Alert>
-               )}
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter doctor's notes here, or use the audio recorder..." {...field} rows={5} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
             
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Treatment Plan</h3>
-              {fields.map((field, index) => (
-                <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
-                    {index > 0 && (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-2 right-2"
-                            onClick={() => remove(index)}
-                        >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+            {/* All other form sections are only visible once a patient is selected */}
+            {selectedPatientId && (
+                <>
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-medium">Consultation Details</h3>
+                        <FormField
+                            control={form.control} name="symptoms"
+                            render={({ field }) => (
+                                <FormItem><FormLabel>Symptoms</FormLabel><FormControl><Textarea placeholder="Patient's reported symptoms" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control} name="examFindings"
+                            render={({ field }) => (
+                                <FormItem><FormLabel>Exam Findings</FormLabel><FormControl><Textarea placeholder="Physical examination findings" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control} name="labResults"
+                            render={({ field }) => (
+                                <FormItem><FormLabel>Lab Results</FormLabel><FormControl><Textarea placeholder="Summary of recent lab results" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}
+                        />
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-medium">Diagnosis</h3>
+                            <Button type="button" variant="outline" size="sm" onClick={handleGetAiSuggestion} disabled={isAiLoading || !selectedPatientId}>
+                                {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                Get AI Suggestion
+                            </Button>
+                        </div>
+                      <FormField
+                        control={form.control}
+                        name="diagnosis"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Diagnosis</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Enter diagnosis..." {...field} rows={4} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-medium">Consultation Documents</h3>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setIsUploadDialogOpen(true)}>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload Document
+                            </Button>
+                        </div>
+                        {taggingState && (
+                            <AiTaggingTool
+                                documentId={taggingState.document.id}
+                                documentName={taggingState.document.fileName}
+                                documentDataUri={taggingState.dataUri}
+                                patientId={selectedPatientId}
+                                onTagsApplied={handleTagsApplied}
+                                onSkip={handleTagsApplied}
+                            />
+                        )}
+                         {consultationDocs.length > 0 && (
+                            <div className="space-y-2 rounded-lg border p-4">
+                                <h4 className="font-medium">Attached Documents:</h4>
+                                {consultationDocs.map(doc => (
+                                    <div key={doc.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                                        <div className="flex items-center gap-2">
+                                            <FileIcon className="h-4 w-4 text-muted-foreground" />
+                                            <span className="font-medium">{doc.fileName}</span>
+                                            {doc.tags?.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                                        </div>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeDocument(doc.id)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                         )}
+
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium">Doctor's Notes</h3>
+                        <Button type="button" variant={isRecording ? "destructive" : "outline"} size="sm" onClick={isRecording ? stopRecording : startRecording} disabled={isTranscribing}>
+                            {isRecording ? <><StopCircle className="mr-2 h-4 w-4" />Stop</> : isTranscribing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Transcribing...</> : <><Mic className="mr-2 h-4 w-4" />Record Audio</>}
                         </Button>
-                    )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name={`treatments.${index}.drugName`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Medication</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Paracetamol" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`treatments.${index}.dosage`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Dosage</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., 500mg" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name={`treatments.${index}.instructions`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Instructions & Other Treatments</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Detail prescription instructions, recommended lab tests, lifestyle changes, or specialist referrals."
-                            {...field}
-                            rows={3}
+                      </div>
+                       {isTranscribing && (
+                            <Alert>
+                                <AlertTitle>Processing Audio</AlertTitle>
+                                <AlertDescription>Your recording is being transcribed. This may take a moment...</AlertDescription>
+                            </Alert>
+                       )}
+                      <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Notes</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Enter doctor's notes here, or use the audio recorder..." {...field} rows={5} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Treatment Plan</h3>
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
+                            {index > 0 && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-2 right-2"
+                                    onClick={() => remove(index)}
+                                >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                            )}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`treatments.${index}.drugName`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Medication</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Paracetamol" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`treatments.${index}.dosage`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Dosage</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., 500mg" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name={`treatments.${index}.instructions`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Instructions & Other Treatments</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Detail prescription instructions, recommended lab tests, lifestyle changes, or specialist referrals."
+                                    {...field}
+                                    rows={3}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append({ drugName: "", dosage: "", instructions: "" })}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Treatment
-              </Button>
-            </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({ drugName: "", dosage: "", instructions: "" })}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Treatment
+                      </Button>
+                    </div>
 
 
-            <div className="flex justify-end gap-4">
-              <Button type="submit" disabled={form.formState.isSubmitting}>Save Consultation</Button>
-              <Button variant="outline" type="button">Print/Export PDF</Button>
-            </div>
+                    <div className="flex justify-end gap-4">
+                      <Button type="submit" disabled={form.formState.isSubmitting}>Save Consultation</Button>
+                      <Button variant="outline" type="button">Print/Export PDF</Button>
+                    </div>
+                </>
+            )}
           </form>
         </Form>
+        {isUploadDialogOpen && selectedPatientId && (
+            <DocumentUploadDialog
+                patientId={selectedPatientId}
+                onClose={() => setIsUploadDialogOpen(false)}
+                onDocumentUploaded={handleDocumentUploaded}
+            />
+        )}
       </CardContent>
     </Card>
   );
 }
+
+    

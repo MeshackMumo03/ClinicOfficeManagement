@@ -113,7 +113,8 @@ service cloud.firestore {
         // Secure list to only allow queries users are authorized to make.
         // A patient can only query for their own consultations.
         // Staff can query any consultations.
-        allow list: if (isDoctor() || isReceptionist() || isAdmin()) || (isPatient() && request.query.where.patientId == request.auth.uid);
+        allow list: if (isDoctor() || isReceptionist() || isAdmin()) || 
+                     (isPatient() && request.query.where.patientId == request.auth.uid);
         // Only doctors and admins can create/update/delete.
         allow create, update, delete: if isDoctor() || isAdmin();
     }

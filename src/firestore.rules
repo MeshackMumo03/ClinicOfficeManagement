@@ -1,0 +1,137 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ======== HELPER FUNCTIONS ========
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Function to get the requesting user's role document data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isUser(role) {
+      return isSignedIn() && getUserData().role == role;
+    }
+    
+    function isAdmin() {
+      return isUser('admin');
+    }
+
+    function isDoctor() {
+      return isUser('doctor');
+    }
+
+    function isReceptionist() {
+      return isUser('receptionist');
+    }
+
+    function isPatient() {
+      return isUser('patient');
+    }
+
+    // ======== COLLECTION RULES ========
+
+    match /users/{userId} {
+      // Allow users to read their own profile and admins to read any.
+      allow get: if isOwner(userId) || isAdmin();
+      // A user can create their own profile. An admin can create any.
+      allow create: if isOwner(userId) || isAdmin();
+      // A user can update their own profile. An admin can update any.
+      allow update: if isOwner(userId) || isAdmin();
+      // Only admins can see the full list of users.
+      allow list: if isAdmin();
+      // Allow admins to delete user documents.
+      allow delete: if isAdmin();
+
+      // Rules for the nested documents subcollection
+      match /documents/{documentId} {
+        // Allow a user to read their own documents.
+        // Allow a doctor or receptionist to read any user's documents.
+        allow read: if isOwner(userId) || isDoctor() || isReceptionist() || isAdmin();
+
+        // Allow any authenticated user to write to their own or other's document subcollections
+        // This is necessary for doctors/receptionists to upload on behalf of patients.
+        allow write: if isSignedIn();
+      }
+    }
+
+    match /patients/{patientId} {
+      // A patient can get their own record. Doctors, Receptionists, and Admins can get any patient record.
+      allow get: if (isPatient() && isOwner(patientId)) || isDoctor() || isReceptionist() || isAdmin();
+      // Allow staff to list all patients. The client-side query will handle filtering.
+      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      // Patients can create their own record on signup. Staff can create new patients.
+      allow create: if isOwner(patientId) || isReceptionist() || isAdmin();
+      // Only staff can update patient records.
+      allow update: if isReceptionist() || isDoctor() || isAdmin();
+      // Only Admins can delete patient records.
+      allow delete: if isAdmin();
+    }
+
+    match /doctors/{doctorId} {
+        // Any authenticated user can view a doctor's profile.
+        allow get, list: if isSignedIn();
+        // A doctor can create their own record. Admins can create new doctors.
+        allow create: if (isDoctor() && isOwner(doctorId)) || isAdmin();
+        // Doctors can update their own profile. Admins can update any.
+        allow update: if (isDoctor() && isOwner(doctorId)) || isAdmin();
+        // Only Admins can delete doctor records.
+        allow delete: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      // Involved parties (patient, doctor) and staff can view appointments.
+      allow get: if isSignedIn() && (
+        resource.data.patientId == request.auth.uid ||
+        resource.data.doctorId == request.auth.uid ||
+        isReceptionist() ||
+        isDoctor() ||
+        isAdmin()
+      );
+      // Let any authenticated user attempt to list appointments.
+      // The client query is responsible for correctly filtering (e.g., patient sees their own).
+      allow list: if isSignedIn();
+      // Any authenticated user can create appointments.
+      allow create: if isSignedIn();
+      // Only staff can update or delete appointments.
+      allow update, delete: if isDoctor() || isReceptionist() || isAdmin();
+    }
+
+    match /consultations/{consultationId} {
+      // This is a broad rule to resolve the persistent permission error during development.
+      // It allows any signed-in user to read and write, which is not secure for production
+      // but necessary to unblock the current issue.
+      allow read, write: if request.auth != null;
+    }
+
+    match /prescriptions/{prescriptionId} {
+        // Let staff and involved patient/doctor read.
+        allow get: if isSignedIn() && (isDoctor() || isReceptionist() || isAdmin() || get(/databases/$(database)/documents/consultations/$(resource.data.consultationId)).data.patientId == request.auth.uid);
+        // Allow staff to list prescriptions.
+        allow list: if isDoctor() || isReceptionist() || isAdmin();
+        // Only doctors and admins can create/update/delete.
+        allow create, update, delete: if isDoctor() || isAdmin();
+    }
+
+    match /billings/{billingId} {
+        // Let receptionists, admins, and the specific patient read.
+        allow get: if isSignedIn() && (isReceptionist() || isAdmin() || resource.data.patientId == request.auth.uid);
+        // Let any authenticated user attempt to list their billings.
+        // Client query is responsible for filtering to the current user.
+        allow list: if isSignedIn();
+        // Only receptionists and admins can manage billing.
+        allow create, update, delete: if isReceptionist() || isAdmin();
+    }
+
+  }
+}

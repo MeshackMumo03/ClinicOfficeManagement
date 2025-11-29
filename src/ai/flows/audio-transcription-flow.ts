@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { gemini20Flash } from '@genkit-ai/googleai';
 
 
 const AudioTranscriptionInputSchema = z.object({
@@ -36,8 +35,8 @@ const audioTranscriptionFlow = ai.defineFlow(
     outputSchema: AudioTranscriptionOutputSchema,
   },
   async (input) => {
+    // Use the default model configured in `src/ai/genkit.ts`
     const llmResponse = await ai.generate({
-      model: gemini20Flash,
       prompt: [
         {
           media: {

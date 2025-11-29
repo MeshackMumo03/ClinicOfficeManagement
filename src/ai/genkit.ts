@@ -1,5 +1,5 @@
 // import the Genkit and Google AI plugin libraries
-import { googleAI } from '@genkit-ai/googleai';
+import { googleAI } from '@genkit-ai/google-genai';
 import { genkit } from 'genkit';
 
 // configure a Genkit instance and export it

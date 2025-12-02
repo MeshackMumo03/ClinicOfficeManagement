@@ -42,7 +42,7 @@ service cloud.firestore {
     // ======== COLLECTION RULES ========
 
     match /users/{userId} {
-      // CRITICAL FIX: A user must be able to read their own user document
+      // A user must be able to read their own user document
       // for the role-based helper functions (isDoctor(), isAdmin(), etc.) to work.
       allow get: if isOwner(userId) || isAdmin();
 
@@ -112,7 +112,7 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // DEFINITIVE FIX: Allow staff to list consultations. Client query must filter.
+      // Allow staff to list consultations. Client query must filter.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
 
       // The specific patient or doctor involved can get their own consultation, and staff can get any.

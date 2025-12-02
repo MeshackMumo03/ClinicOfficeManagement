@@ -18,8 +18,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, CreditCard, Loader2 } from "lucide-react";
-import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { MoreHorizontal, CreditCard, Loader2, PlusCircle } from "lucide-react";
+import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
 import { useToast } from "@/hooks/use-toast";
@@ -128,6 +128,35 @@ export default function BillingPage() {
     }
   }
 
+  const handleGenerateSampleInvoice = async () => {
+    if (!firestore || !user) {
+        toast({ variant: "destructive", title: "Error", description: "Cannot generate invoice. User not logged in." });
+        return;
+    }
+
+    const newInvoice = {
+        patientId: user.uid,
+        consultationId: 'sample-consult-123',
+        billingDate: new Date().toISOString(),
+        amount: Math.floor(Math.random() * (5000 - 1000 + 1) + 1000), // Random amount between 1000 and 5000
+        paymentStatus: 'unpaid',
+    };
+
+    try {
+        await addDocumentNonBlocking(collection(firestore, "billings"), newInvoice);
+        toast({
+            title: "Sample Invoice Created",
+            description: "A new unpaid invoice has been added to your account.",
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Creation Failed',
+            description: error.message || 'Could not create sample invoice.',
+        });
+    }
+  };
+
 
   const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canViewAllBillings && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
 
@@ -138,11 +167,13 @@ export default function BillingPage() {
   // Handle case for roles that shouldn't see any billing info (e.g., doctors).
   if (!canViewAllBillings && userRole !== 'patient') {
     return (
-      <div>
-        <h1 className="font-headline text-3xl md:text-4xl">Billing</h1>
-        <p className="text-muted-foreground mt-4">
-          You do not have permission to view billing information.
-        </p>
+        <div className="flex flex-col gap-8">
+            <div>
+                <h1 className="font-headline text-3xl md:text-4xl">Billing</h1>
+                <p className="text-muted-foreground mt-4">
+                You do not have permission to view billing information.
+                </p>
+            </div>
       </div>
     );
   }
@@ -150,11 +181,17 @@ export default function BillingPage() {
   return (
     <div className="flex flex-col gap-8">
       {/* Header section with page title and description. */}
-      <div>
-        <h1 className="font-headline text-3xl md:text-4xl">Billing</h1>
-        <p className="text-muted-foreground">
-          Manage invoices and payments.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+            <h1 className="font-headline text-3xl md:text-4xl">Billing</h1>
+            <p className="text-muted-foreground">
+            Manage invoices and payments.
+            </p>
+        </div>
+        <Button onClick={handleGenerateSampleInvoice}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Generate Sample Invoice
+        </Button>
       </div>
 
       {/* Table section to display invoices. */}
@@ -224,8 +261,8 @@ export default function BillingPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={userRole === 'patient' ? 5 : 6} className="text-center">
-                        No billing records found.
+                    <TableCell colSpan={canViewAllBillings ? 6 : 5} className="text-center h-24">
+                        No billing records found. Click "Generate Sample Invoice" to create one.
                     </TableCell>
                 </TableRow>
               )}

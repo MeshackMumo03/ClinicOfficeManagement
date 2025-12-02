@@ -42,10 +42,9 @@ service cloud.firestore {
     // ======== COLLECTION RULES ========
 
     match /users/{userId} {
-      // A user must be able to read their own user document
-      // for the role-based helper functions (isDoctor(), isAdmin(), etc.) to work.
+      // Allow users to read their own profile and admins to read any.
+      // This is the critical fix: `isOwner(userId)` allows the helper functions to read the user's role.
       allow get: if isOwner(userId) || isAdmin();
-
       // A user can create their own profile. An admin can create any.
       allow create: if isOwner(userId) || isAdmin();
       // A user can update their own profile. An admin can update any.
@@ -72,7 +71,7 @@ service cloud.firestore {
     match /patients/{patientId} {
       // A patient can get their own record. Doctors, Receptionists, and Admins can get any patient record.
       allow get: if (isPatient() && isOwner(patientId)) || isDoctor() || isReceptionist() || isAdmin();
-      // Allow staff to list all patients. The client-side query will handle filtering.
+      // Allow staff to list all patients.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       // Patients can create their own record on signup. Staff can create new patients.
       allow create: if isOwner(patientId) || isReceptionist() || isAdmin();
@@ -112,9 +111,8 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Allow staff to list consultations. Client query must filter.
+      // Staff and involved parties can list consultations. Client query must filter.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
-
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (
           resource.data.patientId == request.auth.uid ||

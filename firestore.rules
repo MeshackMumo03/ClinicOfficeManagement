@@ -20,7 +20,8 @@ service cloud.firestore {
     }
 
     function isUser(role) {
-      return isSignedIn() && getUserData().role == role;
+      // Check that the user is signed in AND that their user document exists and has the specified role.
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     
     function isAdmin() {
@@ -42,7 +43,7 @@ service cloud.firestore {
     // ======== COLLECTION RULES ========
 
     match /users/{userId} {
-      // CRITICAL FIX: Allow users to read their own profile.
+      // CRITICAL FIX: Allow any signed-in user to read their OWN profile.
       // This is essential for the helper functions (isDoctor, isAdmin, etc.) to work correctly.
       allow get: if isOwner(userId) || isAdmin();
       
@@ -72,10 +73,10 @@ service cloud.firestore {
     match /patients/{patientId} {
       // A patient can get their own record. Doctors, Receptionists, and Admins can get any patient record.
       allow get: if (isPatient() && isOwner(patientId)) || isDoctor() || isReceptionist() || isAdmin();
-      // Allow staff to list all patients.
+      // Allow staff to list all patients. This rule is too broad for `list` without proper client-side queries.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       // Patients can create their own record on signup. Staff can create new patients.
-      allow create: if (isPatient() && isOwner(patientId)) || isReceptionist() || isAdmin();
+      allow create: if isOwner(patientId) || isReceptionist() || isAdmin();
       // Only staff can update patient records.
       allow update: if isReceptionist() || isDoctor() || isAdmin();
       // Only Admins can delete patient records.
@@ -112,7 +113,7 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Staff and involved parties can list consultations. Client query must filter.
+      // Staff (doctors, receptionists, admins) can list consultations.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (

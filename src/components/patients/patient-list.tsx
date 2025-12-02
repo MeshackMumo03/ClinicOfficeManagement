@@ -37,9 +37,8 @@ export function PatientList({ patients, selectedPatientId, onSelectPatient }: Pa
       </div>
       <div className="divide-y">
         {/* Header for the patient list. */}
-        <div className="grid grid-cols-2 p-4 font-medium text-muted-foreground">
+        <div className="grid grid-cols-1 p-4 font-medium text-muted-foreground">
           <div>Name</div>
-          <div>ID</div>
         </div>
         {/* Scrollable area for the list of patients. */}
         <div className="max-h-[600px] overflow-y-auto">
@@ -49,12 +48,11 @@ export function PatientList({ patients, selectedPatientId, onSelectPatient }: Pa
             key={patient.id}
             onClick={() => onSelectPatient(patient.id)}
             className={cn(
-              "grid grid-cols-2 p-4 cursor-pointer hover:bg-muted/50",
+              "grid grid-cols-1 p-4 cursor-pointer hover:bg-muted/50",
               patient.id === selectedPatientId && "bg-muted"
             )}
           >
             <div className="font-medium text-foreground">{patient.firstName} {patient.lastName}</div>
-            <div className="text-primary">{patient.id}</div>
           </div>
         ))}
         </div>

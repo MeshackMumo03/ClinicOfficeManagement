@@ -1,4 +1,3 @@
-
 // Import the Tabs components from ShadCN and other necessary modules.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
@@ -127,11 +126,11 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
 
   return (
     <div>
-        {/* Header with patient's name and ID. */}
+        {/* Header with patient's name. */}
         <div className="mb-6 flex justify-between items-start">
             <div>
                 <h1 className="font-headline text-3xl font-bold">Patient Profile</h1>
-                <p className="text-muted-foreground">Patient ID: {patient.id}</p>
+                 <p className="text-muted-foreground">{`${patient.firstName} ${patient.lastName}`}</p>
             </div>
             {canManagePatients && <EditPatientDialog patient={patient} />}
         </div>

@@ -111,8 +111,8 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Staff and involved parties can list consultations. Client query must filter.
-      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      // Disallow broad list operations for security. Queries must be specific.
+      allow list: if false;
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (
           resource.data.patientId == request.auth.uid ||

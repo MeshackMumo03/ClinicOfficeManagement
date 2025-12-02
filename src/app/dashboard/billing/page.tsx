@@ -18,10 +18,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, CreditCard, Loader2 } from "lucide-react";
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
+import { useToast } from "@/hooks/use-toast";
+import { createPaymentLink } from "@/lib/lipana-actions";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 
 /**
  * BillingPage component to display and manage invoices.
@@ -30,6 +35,10 @@ import { Loader } from "@/components/layout/loader";
 export default function BillingPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
+
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, "users", user.uid) : null),
@@ -87,6 +96,39 @@ export default function BillingPage() {
       return "Loading...";
   }
 
+  const handlePayment = async (invoice: any) => {
+    setPayingInvoiceId(invoice.id);
+    try {
+        const result = await createPaymentLink({
+            amount: invoice.amount,
+            title: `Invoice #${invoice.id}`,
+            description: `Payment for medical consultation.`,
+            invoiceId: invoice.id
+        });
+
+        if (result.success && result.paymentLinkUrl) {
+            toast({
+                title: "Redirecting to Payment",
+                description: "You are being redirected to the Lipa Na M-Pesa payment page.",
+            });
+            // Redirect the user to the payment link
+            router.push(result.paymentLinkUrl);
+        } else {
+            throw new Error(result.error || "Failed to create payment link.");
+        }
+
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Payment Failed',
+            description: error.message || 'Could not initiate the payment process. Please try again.',
+        });
+    } finally {
+        setPayingInvoiceId(null);
+    }
+  }
+
+
   const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canViewAllBillings && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
 
   if (pageIsLoading) {
@@ -126,11 +168,9 @@ export default function BillingPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
-                {userRole !== 'patient' && (
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                )}
+                <TableHead className="text-right">
+                    Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -149,29 +189,42 @@ export default function BillingPage() {
                       {invoice.paymentStatus}
                     </Badge>
                   </TableCell>
-                  {userRole !== 'patient' && (
-                    <TableCell>
-                      {/* Dropdown menu with actions for each invoice. */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>View Details</DropdownMenuItem>
-                          <DropdownMenuItem>Send Reminder</DropdownMenuItem>
-                          <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                      {invoice.paymentStatus !== 'paid' && (
+                        <Button 
+                            onClick={() => handlePayment(invoice)} 
+                            disabled={payingInvoiceId === invoice.id}
+                        >
+                            {payingInvoiceId === invoice.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <CreditCard className="mr-2 h-4 w-4" />
+                            )}
+                            Pay Now
+                        </Button>
+                      )}
+                      {userRole !== 'patient' && (
+                        /* Dropdown menu with actions for each invoice. */
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem>View Details</DropdownMenuItem>
+                            <DropdownMenuItem>Send Reminder</DropdownMenuItem>
+                            <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                  </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={userRole === 'patient' ? 4 : 6} className="text-center">
+                    <TableCell colSpan={userRole === 'patient' ? 5 : 6} className="text-center">
                         No billing records found.
                     </TableCell>
                 </TableRow>

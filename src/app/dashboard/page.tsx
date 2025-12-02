@@ -61,8 +61,12 @@ export default function DashboardPage() {
     if (userRole === "patient") {
       return query(appointmentsCollection, where("patientId", "==", user.uid));
     }
-    // Staff (admin, doctor, receptionist) can see all appointments.
-    if (userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') {
+    // CRITICAL FIX: Doctors should only see appointments assigned to them.
+    if (userRole === 'doctor') {
+      return query(appointmentsCollection, where("doctorId", "==", user.uid));
+    }
+    // Staff (admin, receptionist) can see all appointments.
+    if (userRole === 'admin' || userRole === 'receptionist') {
       return appointmentsCollection;
     }
     // Return null for any other case to be safe.

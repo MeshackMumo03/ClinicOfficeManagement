@@ -437,13 +437,24 @@
           "type": "string",
           "description": "The time the message was sent.",
           "format": "date-time"
+        },
+        "imageUrl": {
+            "type": "string",
+            "description": "URL of an image attached to the message."
+        },
+        "fileUrl": {
+            "type": "string",
+            "description": "URL of a file attached to the message."
+        },
+        "fileName": {
+            "type": "string",
+            "description": "The name of the attached file."
         }
       },
       "required": [
         "id",
         "conversationId",
         "senderId",
-        "text",
         "timestamp"
       ]
     }
@@ -630,4 +641,5 @@
   }
 }
 
+    
     

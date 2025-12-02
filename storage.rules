@@ -26,5 +26,14 @@ service firebase.storage {
       // This is a placeholder; a real app would have more robust role checks here.
       allow delete: if request.auth != null && request.auth.uid == patientId;
     }
+
+    // Rules for chat attachments
+    match /chat_attachments/{conversationId}/{allPaths=**} {
+        // Allow read/write only if the user is a participant of the conversation.
+        // This requires a Firestore read, which is allowed in Storage rules.
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
+    }
   }
 }
+
+    

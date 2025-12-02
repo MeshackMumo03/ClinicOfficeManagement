@@ -4,13 +4,15 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, SendHorizonal } from "lucide-react";
+import { Search, SendHorizonal, Paperclip, File, X, Loader2 } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from "@/firebase";
-import { collection, doc, query, where, addDoc, serverTimestamp, orderBy, getDocs } from "firebase/firestore";
+import { collection, doc, query, where, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Loader } from "@/components/layout/loader";
 import React, { useState, useEffect, useRef } from "react";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Progress } from "@/components/ui/progress";
 
 
 /**
@@ -23,20 +25,6 @@ function getInitials(name: string) {
     return name.split(' ').map(n => n[0]).join('');
 }
 
-
-// A new hook to get user data from a list of users by ID.
-function useOtherParticipant(userId: string | null) {
-    const firestore = useFirestore();
-
-    const userDocRef = useMemoFirebase(
-      () => (userId ? doc(firestore, "users", userId) : null),
-      [userId, firestore]
-    );
-
-    const { data: userData } = useDoc(userDocRef);
-    return userData;
-}
-
 interface Contact {
     id: string;
     name: string;
@@ -46,6 +34,10 @@ interface Contact {
     lastMessage?: string;
 }
 
+interface FileUploadState {
+    progress: number;
+    fileName: string;
+}
 
 /**
  * ChatPage component to facilitate communication with patients.
@@ -54,11 +46,12 @@ interface Contact {
 export default function ChatPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
-  const router = useRouter();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileUpload, setFileUpload] = useState<FileUploadState | null>(null);
 
 
   const userDocRef = useMemoFirebase(
@@ -72,11 +65,9 @@ export default function ChatPage() {
   const contactsQuery = useMemoFirebase(() => {
     if (!firestore || !userRole) return null;
     if (userRole === 'patient') {
-        // Patients can message any doctor
         return collection(firestore, "doctors");
     }
     if (userRole === 'doctor' || userRole === 'receptionist' || userRole === 'admin') {
-        // Staff can message any patient
         return collection(firestore, "patients");
     }
     return null;
@@ -99,19 +90,17 @@ export default function ChatPage() {
 
     const contactMap = new Map<string, Contact>();
 
-    // Add all potential contacts
     allContactsData.forEach((contactDoc: any) => {
         const contactId = contactDoc.id;
         const name = `${contactDoc.firstName || ''} ${contactDoc.lastName || ''}`.trim() || 'Unnamed User';
         contactMap.set(contactId, {
             id: contactId,
             name: name,
-            role: userRole === 'patient' ? 'doctor' : 'patient', // The role of the contact relative to the user
+            role: userRole === 'patient' ? 'doctor' : 'patient',
             photoURL: contactDoc.photoURL || `https://picsum.photos/seed/${contactId}/100/100`,
         });
     });
 
-    // Enhance contacts with existing conversation data
     conversations.forEach((convo: any) => {
         const otherUserId = convo.participants.find((p: string) => p !== user?.uid);
         if (contactMap.has(otherUserId)) {
@@ -132,7 +121,6 @@ export default function ChatPage() {
     }
   }, [selectedContact, selectedConversationId]);
   
-
   // --- 5. Fetch messages for the selected conversation ---
   const messagesQuery = useMemoFirebase(
     () => selectedConversationId ? query(collection(firestore, `conversations/${selectedConversationId}/messages`), orderBy("timestamp", "asc")) : null,
@@ -140,14 +128,12 @@ export default function ChatPage() {
   );
   const { data: messages, isLoading: messagesLoading } = useCollection(messagesQuery);
   
-
   // --- 6. Handle selecting a contact and creating a conversation if needed ---
   const handleSelectContact = async (contact: Contact) => {
     setSelectedContact(contact);
     if (contact.conversationId) {
       setSelectedConversationId(contact.conversationId);
     } else {
-      // No existing conversation, create one.
       if (!user || !contact.id) return;
       
       const conversationData = {
@@ -159,15 +145,13 @@ export default function ChatPage() {
       const newConvoRef = await addDoc(collection(firestore, 'conversations'), conversationData);
       setSelectedConversationId(newConvoRef.id);
       
-      // Update the contact in the local state with the new conversation ID
       setMergedContacts(prev => prev.map(c => c.id === contact.id ? {...c, conversationId: newConvoRef.id} : c));
     }
   };
 
-
   // --- 7. Handle sending a message ---
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !user || !selectedConversationId) return;
+  const handleSendMessage = async (customData?: Partial<any>) => {
+    if ((!messageText.trim() && !customData) || !user || !selectedConversationId) return;
 
     const messagesColRef = collection(firestore, `conversations/${selectedConversationId}/messages`);
     const messageData = {
@@ -175,22 +159,53 @@ export default function ChatPage() {
         text: messageText,
         timestamp: serverTimestamp(),
         conversationId: selectedConversationId,
+        ...customData,
     };
     
-    // Non-blocking write for optimistic UI update
     addDocumentNonBlocking(messagesColRef, messageData);
     
     const conversationDocRef = doc(firestore, "conversations", selectedConversationId);
-    // updateDoc(conversationDocRef, { lastMessage: messageText, lastMessageTimestamp: serverTimestamp() });
+    // updateDoc(conversationDocRef, { lastMessage: messageText || "Attachment sent", lastMessageTimestamp: serverTimestamp() });
 
-    setMessageText(""); // Clear input
+    setMessageText("");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || !selectedConversationId) return;
+
+    const storage = getStorage();
+    const filePath = `chat_attachments/${selectedConversationId}/${Date.now()}_${file.name}`;
+    const fileRef = storageRef(storage, filePath);
+    const uploadTask = uploadBytesResumable(fileRef, file);
+
+    uploadTask.on('state_changed',
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setFileUpload({ progress, fileName: file.name });
+        },
+        (error) => {
+            console.error("Upload error:", error);
+            setFileUpload(null);
+        },
+        () => {
+            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                const messageData = {
+                    fileName: file.name,
+                    [file.type.startsWith('image/') ? 'imageUrl' : 'fileUrl']: downloadURL,
+                };
+                handleSendMessage(messageData);
+                setFileUpload(null);
+            });
+        }
+    );
+    // Reset file input
+    if(fileInputRef.current) fileInputRef.current.value = "";
   };
   
-  // Scroll to bottom of messages when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
 
   const isLoading = isUserLoading || isUserDataLoading || contactsLoading || conversationsLoading;
 
@@ -201,28 +216,22 @@ export default function ChatPage() {
   const contactName = selectedContact ? selectedContact.name : "Loading...";
   const contactRole = selectedContact ? selectedContact.role : 'User';
 
-
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)]">
-      {/* Header section with page title and description. */}
       <div>
         <h1 className="font-headline text-3xl md:text-4xl">Messages</h1>
         <p className="text-muted-foreground">
           Communicate with your {userData?.role === 'patient' ? 'doctors' : 'patients'} securely.
         </p>
       </div>
-
-      {/* Main chat interface with contact list and chat window. */}
       <div className="mt-8 border rounded-lg flex-1 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 h-full">
         <div className="border-r flex flex-col h-full">
-            {/* Search bar for contacts. */}
             <div className="p-4 border-b">
                 <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input type="search" placeholder={`Search contacts...`} className="pl-8" />
                 </div>
             </div>
-            {/* List of contacts. */}
             <div className="flex-1 overflow-y-auto">
                 <nav className="grid gap-1 p-2">
                     {mergedContacts.map((contact) => (
@@ -248,11 +257,9 @@ export default function ChatPage() {
                 </nav>
             </div>
         </div>
-        {/* Chat window section. */}
         <div className="md:col-span-2 lg:col-span-3 flex flex-col h-full bg-muted/20">
           {selectedContact ? (
             <>
-              {/* Header of the chat window with contact's avatar and name. */}
               <div className="p-4 border-b flex items-center gap-4">
                   <Avatar>
                       <AvatarImage data-ai-hint="person face" src={selectedContact?.photoURL} />
@@ -263,7 +270,6 @@ export default function ChatPage() {
                     <p className="text-sm text-muted-foreground capitalize">{contactRole}</p>
                   </div>
               </div>
-              {/* Message display area. */}
               <div className="flex-1 p-6 space-y-6 overflow-y-auto">
                   {messagesLoading && <Loader />}
                   {messages?.map((msg: any) => {
@@ -277,8 +283,17 @@ export default function ChatPage() {
                                     <AvatarFallback>{getInitials(contactName)}</AvatarFallback>
                                 </Avatar>
                             )}
-                            <div className={`${isSender ? 'bg-primary text-primary-foreground' : 'bg-card'} p-3 rounded-lg max-w-xs`}>
-                                <p>{msg.text}</p>
+                            <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${isSender ? 'bg-primary text-primary-foreground' : 'bg-card'}`}>
+                                {msg.imageUrl && (
+                                    <Image src={msg.imageUrl} alt="Uploaded image" width={300} height={200} className="rounded-md mb-2" />
+                                )}
+                                {msg.fileUrl && (
+                                    <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-md bg-background/20 hover:bg-background/40 transition-colors mb-2">
+                                        <File className="h-5 w-5" />
+                                        <span className="font-medium underline">{msg.fileName}</span>
+                                    </a>
+                                )}
+                                {msg.text && <p>{msg.text}</p>}
                                 <p className={`text-xs mt-1 ${isSender ? 'text-right opacity-70' : 'text-right text-muted-foreground'}`}>{messageTime}</p>
                             </div>
                              {isSender && (
@@ -292,23 +307,39 @@ export default function ChatPage() {
                   })}
                   <div ref={messagesEndRef} />
               </div>
-              {/* Input area for typing a new message. */}
+              {fileUpload && (
+                <div className="p-4 border-t bg-card space-y-2">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Uploading: {fileUpload.fileName}</p>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                    <Progress value={fileUpload.progress} />
+                </div>
+              )}
               <div className="p-4 border-t bg-card">
-                  <form onSubmit={(e) => { e.preventDefault(); handleSendMessage();}} className="relative">
+                  <form onSubmit={(e) => { e.preventDefault(); handleSendMessage();}} className="relative flex items-center gap-2">
                       <Input 
                         placeholder="Type your message..." 
                         className="pr-12" 
                         value={messageText}
                         onChange={(e) => setMessageText(e.target.value)}
                       />
-                      <Button type="submit" variant="ghost" size="icon" className="absolute top-1/2 right-1.5 -translate-y-1/2 h-8 w-8 text-muted-foreground" disabled={!messageText.trim()}>
+                       <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                            className="hidden"
+                        />
+                      <Button type="button" variant="ghost" size="icon" className="text-muted-foreground" onClick={() => fileInputRef.current?.click()}>
+                          <Paperclip className="h-5 w-5" />
+                      </Button>
+                      <Button type="submit" variant="ghost" size="icon" className="text-muted-foreground" disabled={!messageText.trim()}>
                           <SendHorizonal className="h-5 w-5" />
                       </Button>
                   </form>
               </div>
             </>
           ) : (
-            // Display a message if no conversation is selected.
             <div className="flex-1 flex items-center justify-center">
               <p className="text-muted-foreground">Select a contact to start messaging.</p>
             </div>
@@ -318,3 +349,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    

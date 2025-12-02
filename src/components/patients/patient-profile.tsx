@@ -29,32 +29,31 @@ interface PatientProfileProps {
 
 /**
  * A component to display the consultation history for a patient.
- * It now filters consultations by the logged-in doctor.
+ * It shows all consultations for the patient, accessible by authorized staff.
  * @param {object} props - The properties for the component.
  * @param {string} props.patientId - The ID of the patient.
  */
 function ConsultationHistory({ patientId }: { patientId: string }) {
     const firestore = useFirestore();
-    const { user } = useUser(); // Get the currently logged-in user
+    const { user } = useUser();
 
-    // Fetch doctors to resolve names in the history
+    // Fetch all doctors to resolve their names in the consultation history.
     const doctorsQuery = useMemoFirebase(
       () => (firestore ? collection(firestore, "doctors") : null),
       [firestore]
     );
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
 
+    // This query now fetches all consultations for a given patient,
+    // allowing any authorized staff member (doctor, receptionist, admin) to see the full history.
     const consultationsQuery = useMemoFirebase(() => {
-        if (!firestore || !patientId || !user?.uid) return null;
-        // CRITICAL FIX: Add a `where` clause to filter by the current doctor's ID.
-        // This ensures doctors only see consultations they conducted.
+        if (!firestore || !patientId) return null;
         return query(
             collection(firestore, 'consultations'),
             where('patientId', '==', patientId),
-            where('doctorId', '==', user.uid), // Only get consultations for the logged-in doctor
             orderBy('consultationDateTime', 'desc')
         );
-    }, [firestore, patientId, user?.uid]);
+    }, [firestore, patientId]);
 
     const { data: consultations, isLoading, error } = useCollection(consultationsQuery);
 
@@ -80,18 +79,20 @@ function ConsultationHistory({ patientId }: { patientId: string }) {
             </CardHeader>
             <CardContent>
                 {consultations && consultations.length > 0 ? (
-                    <ul className="space-y-4">
+                    <div className="space-y-4">
                         {consultations.map((c: any) => (
-                            <li key={c.id} className="border-b pb-2">
-                                <p><strong>Date:</strong> {new Date(c.consultationDateTime).toLocaleDateString()}</p>
-                                <p><strong>Doctor:</strong> {getDoctorName(c.doctorId)}</p>
-                                <p><strong>Diagnosis:</strong> {c.diagnosis || 'N/A'}</p>
-                                <p className="text-sm text-muted-foreground"><strong>Notes:</strong> {c.notes || 'No notes available.'}</p>
-                            </li>
+                            <div key={c.id} className="border p-4 rounded-lg bg-muted/20">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="font-semibold">{new Date(c.consultationDateTime).toLocaleDateString()}</h4>
+                                    <span className="text-sm text-muted-foreground">{getDoctorName(c.doctorId)}</span>
+                                </div>
+                                <p className="font-medium">Diagnosis: <span className="font-normal">{c.diagnosis || 'N/A'}</span></p>
+                                {c.notes && <p className="text-sm text-muted-foreground mt-2"><strong>Notes:</strong> {c.notes}</p>}
+                            </div>
                         ))}
-                    </ul>
+                    </div>
                 ) : (
-                    <p className="text-muted-foreground">No consultation history found for this patient with the current doctor.</p>
+                    <p className="text-muted-foreground text-center py-8">No consultation history found for this patient.</p>
                 )}
             </CardContent>
         </Card>

@@ -42,9 +42,10 @@ service cloud.firestore {
     // ======== COLLECTION RULES ========
 
     match /users/{userId} {
-      // Allow users to read their own profile and admins to read any.
-      // This is the critical fix: `isOwner(userId)` allows the helper functions to read the user's role.
+      // CRITICAL FIX: Allow users to read their own profile.
+      // This is essential for the helper functions (isDoctor, isAdmin, etc.) to work correctly.
       allow get: if isOwner(userId) || isAdmin();
+      
       // A user can create their own profile. An admin can create any.
       allow create: if isOwner(userId) || isAdmin();
       // A user can update their own profile. An admin can update any.
@@ -74,7 +75,7 @@ service cloud.firestore {
       // Allow staff to list all patients.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       // Patients can create their own record on signup. Staff can create new patients.
-      allow create: if isOwner(patientId) || isReceptionist() || isAdmin();
+      allow create: if (isPatient() && isOwner(patientId)) || isReceptionist() || isAdmin();
       // Only staff can update patient records.
       allow update: if isReceptionist() || isDoctor() || isAdmin();
       // Only Admins can delete patient records.

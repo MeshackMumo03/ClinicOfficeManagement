@@ -20,6 +20,8 @@ import { doc, collection, query, where } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/layout/loader";
 import { NewAppointmentDialog } from "@/components/appointments/new-appointment-dialog";
+import { CreatePatientDialog } from "@/components/patients/create-patient-dialog";
+import { CreateInvoiceDialog } from "@/components/billing/create-invoice-dialog";
 
 /**
  * DashboardPage: The main landing page for logged-in users.
@@ -195,7 +197,11 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-bold">Quick Actions</h2>
         <div className="flex flex-wrap gap-4">
-          {(userRole === 'admin' || userRole === 'receptionist') && <Button>Register New Patient</Button>}
+          {(userRole === 'admin' || userRole === 'receptionist') && (
+            <CreatePatientDialog>
+              <Button>Register New Patient</Button>
+            </CreatePatientDialog>
+          )}
           {(userRole === 'admin' || userRole === 'doctor' || userRole === 'receptionist') && (
             <NewAppointmentDialog>
                 <Button variant="secondary">Book Appointment</Button>
@@ -206,7 +212,11 @@ export default function DashboardPage() {
                 <Button variant="secondary">Book New Appointment</Button>
             </NewAppointmentDialog>
           )}
-          {(userRole === 'admin' || userRole === 'receptionist') && <Button variant="secondary">Generate Receipt</Button>}
+          {(userRole === 'admin' || userRole === 'receptionist') && (
+            <CreateInvoiceDialog>
+              <Button variant="secondary">Generate Receipt</Button>
+            </CreateInvoiceDialog>
+          )}
         </div>
       </div>
     </div>

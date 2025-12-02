@@ -170,6 +170,18 @@
           "type": "string",
           "description": "Detailed notes from the consultation."
         },
+        "symptoms": {
+            "type": "string",
+            "description": "Patient's reported symptoms."
+        },
+        "examFindings": {
+            "type": "string",
+            "description": "Physical examination findings."
+        },
+        "labResults": {
+            "type": "string",
+            "description": "Summary of recent lab results."
+        },
         "diagnosis": {
           "type": "string",
           "description": "Diagnosis made during the consultation."

@@ -79,7 +79,7 @@ export default function BillingPage() {
   }, [firestore, canManageBillings]);
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
-  // Fetch the patient's own name if they are a patient
+  // Fetch the patient's own patient document if they are a patient
   const singlePatientDocRef = useMemoFirebase(() => {
     if (!firestore || !user || userRole !== 'patient') return null;
     return doc(firestore, 'patients', user.uid);
@@ -98,6 +98,9 @@ export default function BillingPage() {
   }
 
   const getPatientPhoneNumber = (patientId: string) => {
+    if (userRole === 'patient' && singlePatient) {
+        return singlePatient.contactNumber;
+    }
     if (patients) {
       const patient = patients.find(p => p.id === patientId);
       return patient?.contactNumber;

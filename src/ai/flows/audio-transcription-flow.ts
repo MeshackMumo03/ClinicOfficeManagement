@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 
 
 const AudioTranscriptionInputSchema = z.object({
@@ -37,9 +36,9 @@ const audioTranscriptionFlow = ai.defineFlow(
   },
   async (input) => {
     // CRITICAL FIX: Explicitly use a model that supports audio transcription.
-    // The default 'gemini-pro-vision' model does not, causing the 404 error.
+    // The default 'gemini-pro-vision' model does not, and the previous fix had an invalid model name.
     const llmResponse = await ai.generate({
-      model: googleAI('gemini-1.5-flash-latest'),
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: [
         {
           media: {

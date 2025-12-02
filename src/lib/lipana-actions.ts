@@ -3,7 +3,7 @@
 
 import { Lipana } from '@lipana/sdk';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db as adminDb } from '@/firebase/config-server'; // CRITICAL FIX: Use server-side admin instance
+import { db as adminDb } from '@/firebase/config-server'; 
 import { revalidatePath } from 'next/cache';
 
 // This is a server-side only file.
@@ -17,44 +17,38 @@ if (!process.env.LIPANA_SECRET_KEY) {
 // Initialize the SDK
 const lipana = new Lipana({
   apiKey: process.env.LIPANA_SECRET_KEY,
-  environment: 'production' // Set to 'production' as per the key prefix
+  environment: 'production'
 });
 
-interface CreatePaymentLinkInput {
+interface InitiateStkPushInput {
     amount: number;
     phoneNumber: string;
-    title: string;
-    description: string;
     invoiceId: string;
 }
 
-interface CreatePaymentLinkOutput {
+interface InitiateStkPushOutput {
     success: boolean;
-    paymentLinkUrl?: string;
-    error?: string;
+    message: string;
+    transactionId?: string;
+    checkoutRequestID?: string;
 }
 
 /**
- * Creates a Lipa Na M-Pesa payment link for a given invoice.
- * @param input - The details for creating the payment link.
- * @returns An object containing the success status and the payment link URL or an error message.
+ * Initiates an STK push payment to the user's phone.
+ * @param input - The details for initiating the STK push.
+ * @returns An object containing the success status and transaction details or an error message.
  */
-export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<CreatePaymentLinkOutput> {
-  const { amount, phoneNumber, title, description, invoiceId } = input;
-  
-  // Use a relative URL for success, which will redirect to your own app.
-  // We'll need to build out this success page later.
-  const successRedirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/dashboard/billing?payment_success=true&invoice_id=${invoiceId}`;
+export async function initiateStkPush(input: InitiateStkPushInput): Promise<InitiateStkPushOutput> {
+  const { amount, phoneNumber, invoiceId } = input;
+
+  if (!phoneNumber) {
+    return { success: false, message: 'Phone number is required for STK Push.' };
+  }
   
   try {
-    const paymentLink = await lipana.paymentLinks.create({
-      title,
-      description,
-      amount,
-      currency: 'KES',
-      phoneNumber,
-      allowCustomAmount: false,
-      successRedirectUrl: successRedirectUrl
+    const stkResponse = await lipana.transactions.initiateStkPush({
+      phone: phoneNumber,
+      amount: amount,
     });
 
     // Mark the invoice as pending in Firestore using the admin instance
@@ -64,11 +58,16 @@ export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<
     // Revalidate the path to show the updated status on the billing page
     revalidatePath('/dashboard/billing');
     
-    console.log('Payment link created:', paymentLink.url);
-    return { success: true, paymentLinkUrl: paymentLink.url };
+    console.log('STK push initiated:', stkResponse);
+    return { 
+        success: true, 
+        message: 'STK Push initiated successfully. Please check your phone.',
+        transactionId: stkResponse.transactionId,
+        checkoutRequestID: stkResponse.checkoutRequestID,
+    };
 
   } catch (error: any) {
-    console.error('Error creating payment link:', error.message);
-    return { success: false, error: error.message || "An unknown error occurred." };
+    console.error('Error initiating STK push:', error.message);
+    return { success: false, message: error.message || "An unknown error occurred." };
   }
 }

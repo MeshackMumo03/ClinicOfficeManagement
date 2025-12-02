@@ -24,7 +24,7 @@ import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@
 import { collection, query, where, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
 import { useToast } from "@/hooks/use-toast";
-import { createPaymentLink } from "@/lib/lipana-actions";
+import { initiateStkPush } from "@/lib/lipana-actions";
 import { useState } from "react";
 import { CreateInvoiceDialog } from "@/components/billing/create-invoice-dialog";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -117,29 +117,26 @@ export default function BillingPage() {
       toast({
         variant: 'destructive',
         title: 'Payment Failed',
-        description: 'Patient phone number is missing. Please have a receptionist update it.',
+        description: 'Patient phone number is missing. Please update your profile or contact a receptionist.',
       });
       setPayingInvoiceId(null);
       return;
     }
   
     try {
-      const result = await createPaymentLink({
+      const result = await initiateStkPush({
         amount: invoice.amount,
         phoneNumber: phoneNumber,
-        title: `Invoice #${invoice.id.substring(0, 8)}`,
-        description: `Payment for medical services.`,
         invoiceId: invoice.id,
       });
   
-      if (result.success && result.paymentLinkUrl) {
+      if (result.success) {
         toast({
-          title: 'Redirecting to Payment',
-          description: 'You are being redirected to the Lipa Na M-Pesa payment page.',
+          title: 'Payment Initiated',
+          description: 'Please check your phone to enter your M-Pesa PIN.',
         });
-        window.location.href = result.paymentLinkUrl;
       } else {
-        throw new Error(result.error || 'Failed to create payment link.');
+        throw new Error(result.message || 'Failed to initiate STK push.');
       }
     } catch (error: any) {
       toast({
@@ -147,7 +144,8 @@ export default function BillingPage() {
         title: 'Payment Failed',
         description: error.message || 'Could not initiate the payment process. Please try again.',
       });
-      setPayingInvoiceId(null);
+    } finally {
+        setPayingInvoiceId(null);
     }
   };
 

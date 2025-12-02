@@ -12,7 +12,7 @@ interface InfoRowProps {
  * It will not render if the value is not provided.
  * @param {InfoRowProps} props The properties for the component.
  */
-function InfoRow({ label, value }: InfoRowProps) {
+export function InfoRow({ label, value }: InfoRowProps) {
   if (!value) return null;
   return (
     <div className="grid gap-1">

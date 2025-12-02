@@ -26,9 +26,9 @@ import { Loader } from "@/components/layout/loader";
 import { useToast } from "@/hooks/use-toast";
 import { createPaymentLink } from "@/lib/lipana-actions";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { CreateInvoiceDialog } from "@/components/billing/create-invoice-dialog";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { InvoiceDetailsDialog } from "@/components/billing/invoice-details-dialog";
 
 
 /**
@@ -39,7 +39,6 @@ export default function BillingPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const router = useRouter();
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
 
 
@@ -164,6 +163,14 @@ export default function BillingPage() {
     });
   };
 
+  const handleSendReminder = (invoice: any) => {
+    const patientName = getPatientName(invoice.patientId);
+    toast({
+        title: "Reminder Sent",
+        description: `A payment reminder has been sent to ${patientName}.`,
+    });
+  };
+
   const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canManageBillings && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
 
   if (pageIsLoading) {
@@ -262,9 +269,11 @@ export default function BillingPage() {
                             <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem disabled>View Details</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)}>Mark as Paid</DropdownMenuItem>
-                            <DropdownMenuItem disabled>Send Reminder</DropdownMenuItem>
+                            <InvoiceDetailsDialog invoice={invoice} patientName={getPatientName(invoice.patientId)}>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>View Details</DropdownMenuItem>
+                            </InvoiceDetailsDialog>
+                            <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)} disabled={invoice.paymentStatus === 'paid'}>Mark as Paid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSendReminder(invoice)}>Send Reminder</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                       )}

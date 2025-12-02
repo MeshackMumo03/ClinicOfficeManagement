@@ -17,9 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, CreditCard, Loader2, PlusCircle } from "lucide-react";
-import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
+import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ import { createPaymentLink } from "@/lib/lipana-actions";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreateInvoiceDialog } from "@/components/billing/create-invoice-dialog";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 /**
@@ -259,8 +261,7 @@ export default function BillingPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>View Details</DropdownMenuItem>
-                            <DropdownMenuItem>Send Reminder</DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)}>Mark as Paid</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>

@@ -123,6 +123,7 @@ export default function BillingPage() {
     }
   
     try {
+      // CRITICAL FIX: The 'await' is necessary to get the result from the server action.
       const result = await createPaymentLink({
         amount: invoice.amount,
         phoneNumber: phoneNumber,
@@ -136,7 +137,7 @@ export default function BillingPage() {
           title: 'Redirecting to Payment',
           description: 'You are being redirected to the Lipa Na M-Pesa payment page.',
         });
-        // CRITICAL FIX: Redirect the user to the payment link.
+        // CRITICAL FIX: Redirect the user to the payment link using the browser's location object.
         window.location.href = result.paymentLinkUrl;
       } else {
         throw new Error(result.error || 'Failed to create payment link.');
@@ -147,9 +148,8 @@ export default function BillingPage() {
         title: 'Payment Failed',
         description: error.message || 'Could not initiate the payment process. Please try again.',
       });
-    } finally {
-      // Only set loading to false if there wasn't a successful redirect.
-      // If we redirect, the page will be left anyway.
+       // Only set loading to false in case of an error.
+       // On success, the page redirects away anyway.
       setPayingInvoiceId(null);
     }
   };

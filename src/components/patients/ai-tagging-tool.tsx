@@ -121,7 +121,7 @@ export function AiTaggingTool({
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between items-center bg-primary/5 rounded-b-lg">
+      <CardFooter className="flex justify-between items-center bg-primary/5 rounded-b-lg p-4">
          <Button variant="ghost" onClick={onSkip} disabled={isLoading}>
             Skip
         </Button>

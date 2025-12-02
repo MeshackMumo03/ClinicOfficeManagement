@@ -367,7 +367,7 @@ export function ConsultationForm() {
                       field.onChange(value);
                       setSelectedPatientId(value);
                       setConsultationDocs([]); // Clear docs when patient changes
-                    }} defaultValue={field.value}>
+                    }} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a patient" />
@@ -599,7 +599,7 @@ export function ConsultationForm() {
                     </div>
 
 
-                    <div className="flex justify-end gap-4">
+                    <div className="flex justify-end gap-4 pt-4">
                       <Button type="submit" disabled={form.formState.isSubmitting}>Save Consultation</Button>
                       <Button variant="outline" type="button">Print/Export PDF</Button>
                     </div>

@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview A GenAI flow for analyzing and tagging uploaded documents.
+ * @fileOverview A GenAI flow for analyzing and tagging uploaded medical documents.
  * 
  * - documentTagging - A function that takes a document's public URL and suggests relevant tags.
  */
@@ -31,7 +31,7 @@ const prompt = ai.definePrompt({
     name: 'documentTaggingPrompt',
     input: { schema: DocumentTaggingInputSchema },
     output: { schema: DocumentTaggingOutputSchema },
-    prompt: `Analyze the following medical document and provide a list of 1-3 concise, relevant tags. Examples: "blood test", "x-ray", "MRI report", "pathology result", "patient summary".
+    prompt: `You are an expert medical archivist. Analyze the following medical document and provide a list of 1-3 concise, relevant tags. Examples: "blood test", "x-ray", "MRI report", "pathology result", "patient summary".
   
   Document: {{media url=documentUrl}}`,
 });
@@ -41,12 +41,10 @@ const documentTaggingFlow = ai.defineFlow(
     name: 'documentTaggingFlow',
     inputSchema: DocumentTaggingInputSchema,
     outputSchema: DocumentTaggingOutputSchema,
-    model: 'googleai/gemini-pro-vision'
+    model: 'googleai/gemini-pro-vision', // Use the correct, available model for vision tasks
   },
   async (input) => {
     const { output } = await prompt(input);
     return output!;
   }
 );
-
-    

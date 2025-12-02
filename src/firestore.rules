@@ -42,8 +42,10 @@ service cloud.firestore {
     // ======== COLLECTION RULES ========
 
     match /users/{userId} {
-      // CRITICAL FIX: Allow users to read their own profile. This enables role checks.
+      // CRITICAL FIX: A user must be able to read their own user document
+      // for the role-based helper functions (isDoctor(), isAdmin(), etc.) to work.
       allow get: if isOwner(userId) || isAdmin();
+
       // A user can create their own profile. An admin can create any.
       allow create: if isOwner(userId) || isAdmin();
       // A user can update their own profile. An admin can update any.
@@ -112,6 +114,7 @@ service cloud.firestore {
     match /consultations/{consultationId} {
       // DEFINITIVE FIX: Allow staff to list consultations. Client query must filter.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
+
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (
           resource.data.patientId == request.auth.uid ||

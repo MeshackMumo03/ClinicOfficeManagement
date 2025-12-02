@@ -43,6 +43,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       // Allow users to read their own profile and admins to read any.
+      // This is the critical fix: `isOwner(userId)` allows the helper functions to read the user's role.
       allow get: if isOwner(userId) || isAdmin();
       // A user can create their own profile. An admin can create any.
       allow create: if isOwner(userId) || isAdmin();
@@ -111,7 +112,7 @@ service cloud.firestore {
 
     match /consultations/{consultationId} {
       // Staff and involved parties can list consultations. Client query must filter.
-      allow list: if isSignedIn();
+      allow list: if isDoctor() || isReceptionist() || isAdmin();
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (
           resource.data.patientId == request.auth.uid ||

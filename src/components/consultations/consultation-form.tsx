@@ -252,22 +252,21 @@ export function ConsultationForm() {
         consultationDateTime: new Date().toISOString(),
         notes: data.notes,
         diagnosis: data.diagnosis,
-        // The `documents` field is now managed here.
         documents: consultationDocs,
-        prescriptionIds: [], // This will be populated by prescription creation
+        prescriptionIds: [],
       };
   
       const consultationRef = await addDocumentNonBlocking(collection(firestore, "consultations"), consultationData);
   
       if (data.treatments && data.treatments.length > 0 && consultationRef) {
         const prescriptionPromises = data.treatments
-            .filter(treatment => treatment.drugName) // Only create prescriptions if there's a drug name
+            .filter(treatment => treatment.drugName) 
             .map(treatment => {
                 const prescriptionData = {
                     consultationId: consultationRef.id,
                     drugName: treatment.drugName,
                     dosage: treatment.dosage,
-                    frequency: treatment.instructions, // Assuming instructions contain frequency
+                    frequency: treatment.instructions, 
                     notes: treatment.instructions,
                 };
                 return addDocumentNonBlocking(collection(firestore, "prescriptions"), prescriptionData);
@@ -275,11 +274,22 @@ export function ConsultationForm() {
   
         await Promise.all(prescriptionPromises);
       }
-  
+      
+      // Automatically generate a billing record for this consultation
+      if (consultationRef) {
+        const billingData = {
+            patientId: data.patientId,
+            consultationId: consultationRef.id,
+            billingDate: new Date().toISOString(),
+            amount: Math.floor(Math.random() * (5000 - 1000 + 1) + 1000), // Random amount for demo
+            paymentStatus: 'unpaid',
+        };
+        await addDocumentNonBlocking(collection(firestore, "billings"), billingData);
+      }
   
       toast({
         title: "Consultation Saved",
-        description: "The consultation details have been successfully saved.",
+        description: "The consultation details and invoice have been successfully created.",
       });
       form.reset();
       setConsultationDocs([]);

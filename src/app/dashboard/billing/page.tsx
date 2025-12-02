@@ -111,47 +111,48 @@ export default function BillingPage() {
   const handlePayment = async (invoice: any) => {
     setPayingInvoiceId(invoice.id);
     const phoneNumber = getPatientPhoneNumber(invoice.patientId);
-
+  
     if (!phoneNumber) {
-        toast({
-            variant: 'destructive',
-            title: 'Payment Failed',
-            description: 'Patient phone number is missing. Please have a receptionist update it.',
-        });
-        setPayingInvoiceId(null);
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Payment Failed',
+        description: 'Patient phone number is missing. Please have a receptionist update it.',
+      });
+      setPayingInvoiceId(null);
+      return;
     }
-
+  
     try {
-        const result = await createPaymentLink({
-            amount: invoice.amount,
-            phoneNumber: phoneNumber,
-            title: `Invoice #${invoice.id.substring(0, 8)}`,
-            description: `Payment for medical services.`,
-            invoiceId: invoice.id
-        });
-
-        if (result.success && result.paymentLinkUrl) {
-            toast({
-                title: "Redirecting to Payment",
-                description: "You are being redirected to the Lipa Na M-Pesa payment page.",
-            });
-            // Redirect the user to the payment link
-            router.push(result.paymentLinkUrl);
-        } else {
-            throw new Error(result.error || "Failed to create payment link.");
-        }
-
-    } catch (error: any) {
+      const result = await createPaymentLink({
+        amount: invoice.amount,
+        phoneNumber: phoneNumber,
+        title: `Invoice #${invoice.id.substring(0, 8)}`,
+        description: `Payment for medical services.`,
+        invoiceId: invoice.id,
+      });
+  
+      if (result.success && result.paymentLinkUrl) {
         toast({
-            variant: 'destructive',
-            title: 'Payment Failed',
-            description: error.message || 'Could not initiate the payment process. Please try again.',
+          title: 'Redirecting to Payment',
+          description: 'You are being redirected to the Lipa Na M-Pesa payment page.',
         });
+        // CRITICAL FIX: Redirect the user to the payment link.
+        window.location.href = result.paymentLinkUrl;
+      } else {
+        throw new Error(result.error || 'Failed to create payment link.');
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Payment Failed',
+        description: error.message || 'Could not initiate the payment process. Please try again.',
+      });
     } finally {
-        setPayingInvoiceId(null);
+      // Only set loading to false if there wasn't a successful redirect.
+      // If we redirect, the page will be left anyway.
+      setPayingInvoiceId(null);
     }
-  }
+  };
 
   const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canManageBillings && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
 

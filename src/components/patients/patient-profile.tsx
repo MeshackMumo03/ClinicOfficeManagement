@@ -1,3 +1,4 @@
+
 // Import the Tabs components from ShadCN and other necessary modules.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
@@ -45,9 +46,7 @@ function ConsultationHistory({ patientId }: { patientId: string }) {
 
     const consultationsQuery = useMemoFirebase(() => {
         if (!firestore || !patientId) return null;
-        // CRITICAL FIX: The query MUST filter by patientId to comply with security rules.
-        // This ensures that staff can only list consultations for a specific patient,
-        // preventing broad, unauthorized data access.
+        // The query MUST filter by patientId to comply with security rules.
         return query(
             collection(firestore, 'consultations'),
             where('patientId', '==', patientId),
@@ -109,7 +108,7 @@ function InfoRow({ label, value }: { label:string; value?: string }) {
     if (!value) return null;
     return (
         <div className="grid gap-1">
-            <p className="text-sm font-medium text-primary">{label}</p>
+            <p className="text-sm font-medium text-muted-foreground">{label}</p>
             <p className="text-foreground">{value}</p>
         </div>
     )

@@ -70,8 +70,9 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
   const { data: userData } = useDoc(userDocRef);
   const userRole = userData?.role;
 
-  // This is the fix: include 'doctor' in the list of roles that can fetch patients.
-  const canFetchPatients = userRole === 'admin' || userRole === 'receptionist' || userRole === 'doctor';
+  // CRITICAL FIX: Only fetch the full patient list if the user is an admin or receptionist.
+  // Doctors do not have permission to list all patients, so this prevents the permission error.
+  const canFetchPatients = userRole === 'admin' || userRole === 'receptionist';
   const patientsQuery = useMemoFirebase(
     () => (firestore && canFetchPatients ? collection(firestore, "patients") : null),
     [firestore, canFetchPatients]
@@ -157,8 +158,8 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
-              {/* Only show the patient dropdown to staff members. Patients book for themselves. */}
-              {userRole !== 'patient' && (
+              {/* Only show the patient dropdown to staff members who can fetch patients. Patients book for themselves. */}
+              {canFetchPatients && (
                 <FormField
                   control={control}
                   name="patientId"
@@ -183,6 +184,10 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
                     </FormItem>
                   )}
                 />
+              )}
+              {/* Patients and doctors who can't see the full list just book for themselves or need to know the patient ID */}
+              {(userRole === 'patient') && (
+                 <Input type="hidden" {...form.register('patientId')} />
               )}
               <FormField
                 control={control}

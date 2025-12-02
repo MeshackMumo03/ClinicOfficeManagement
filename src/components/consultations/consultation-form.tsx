@@ -37,6 +37,7 @@ import { DocumentUploadDialog } from "../patients/document-upload-dialog";
 import { AiTaggingTool } from "../patients/ai-tagging-tool";
 import type { PatientDocument } from "@/lib/document-actions";
 import { Badge } from "../ui/badge";
+import { revalidatePath } from "next/cache";
 
 
 const treatmentSchema = z.object({
@@ -253,11 +254,25 @@ export function ConsultationForm() {
         notes: data.notes,
         diagnosis: data.diagnosis,
         documents: consultationDocs,
-        prescriptionIds: [],
+        symptoms: data.symptoms,
+        examFindings: data.examFindings,
+        labResults: data.labResults,
       };
   
       const consultationRef = await addDocumentNonBlocking(collection(firestore, "consultations"), consultationData);
   
+      if (consultationRef) {
+        // Automatically create a billing record for this consultation
+        const billingData = {
+            patientId: data.patientId,
+            consultationId: consultationRef.id,
+            billingDate: new Date().toISOString(),
+            amount: Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000, // Random amount between 1000-5000
+            paymentStatus: 'unpaid',
+        };
+        await addDocumentNonBlocking(collection(firestore, 'billings'), billingData);
+      }
+
       if (data.treatments && data.treatments.length > 0 && consultationRef) {
         const prescriptionPromises = data.treatments
             .filter(treatment => treatment.drugName) 

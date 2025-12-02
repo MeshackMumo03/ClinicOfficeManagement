@@ -3,7 +3,7 @@
 
 import { Lipana } from '@lipana/sdk';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/firebase/config-client';
+import { db as adminDb } from '@/firebase/config-server'; // CRITICAL FIX: Use server-side admin instance
 import { revalidatePath } from 'next/cache';
 
 // This is a server-side only file.
@@ -57,8 +57,8 @@ export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<
       successRedirectUrl: successRedirectUrl
     });
 
-    // Mark the invoice as pending in Firestore
-    const invoiceRef = doc(db, 'billings', invoiceId);
+    // Mark the invoice as pending in Firestore using the admin instance
+    const invoiceRef = doc(adminDb, 'billings', invoiceId);
     await updateDoc(invoiceRef, { paymentStatus: 'pending' });
 
     // Revalidate the path to show the updated status on the billing page

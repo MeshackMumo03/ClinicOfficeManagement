@@ -35,7 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Loader2 } from "lucide-react";
 
 // Schema for invoice creation form
@@ -84,6 +84,7 @@ export function CreateInvoiceDialog({ children }: { children: React.ReactNode })
 
   const onSubmit = async (data: FormData) => {
     try {
+      // 1. Create a new document reference for the invoice in the 'billings' collection
       const newInvoiceRef = doc(collection(firestore, "billings"));
       
       const invoiceData = {
@@ -93,13 +94,15 @@ export function CreateInvoiceDialog({ children }: { children: React.ReactNode })
         billingDate: new Date().toISOString(),
         paymentStatus: 'unpaid',
       };
+      
+      // 2. Save the invoice data to Firestore using setDocumentNonBlocking
+      setDocumentNonBlocking(newInvoiceRef, invoiceData, { merge: false });
 
-      await addDocumentNonBlocking(collection(firestore, "billings"), invoiceData);
-
-      // If a new phone number was entered, update the patient record
+      // 3. If a new phone number was entered, update the corresponding patient record
       if (data.phoneNumber && data.phoneNumber !== selectedPatient?.contactNumber) {
         const patientDocRef = doc(firestore, "patients", data.patientId);
-        await addDocumentNonBlocking(collection(firestore, "patients"), { contactNumber: data.phoneNumber });
+        // Use merge:true to only update the contact number field
+        setDocumentNonBlocking(patientDocRef, { contactNumber: data.phoneNumber }, { merge: true });
       }
 
       toast({

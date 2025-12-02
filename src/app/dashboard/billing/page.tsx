@@ -262,7 +262,9 @@ export default function BillingPage() {
                             <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem disabled>View Details</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)}>Mark as Paid</DropdownMenuItem>
+                            <DropdownMenuItem disabled>Send Reminder</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                       )}

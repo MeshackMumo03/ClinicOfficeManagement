@@ -140,8 +140,8 @@ service cloud.firestore {
         // Let any authenticated user attempt to list their billings.
         // Client query is responsible for filtering to the current user.
         allow list: if isSignedIn();
-        // Only receptionists and admins can manage billing.
-        allow create, update, delete: if isReceptionist() || isAdmin();
+        // Allow doctors, receptionists and admins to manage billing.
+        allow create, update, delete: if isDoctor() || isReceptionist() || isAdmin();
     }
 
     match /conversations/{conversationId} {

@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, CreditCard, Loader2, PlusCircle } from "lucide-react";
-import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
 import { useToast } from "@/hooks/use-toast";
@@ -123,7 +123,6 @@ export default function BillingPage() {
     }
   
     try {
-      // CRITICAL FIX: The 'await' is necessary to get the result from the server action.
       const result = await createPaymentLink({
         amount: invoice.amount,
         phoneNumber: phoneNumber,
@@ -137,7 +136,6 @@ export default function BillingPage() {
           title: 'Redirecting to Payment',
           description: 'You are being redirected to the Lipa Na M-Pesa payment page.',
         });
-        // CRITICAL FIX: Redirect the user to the payment link using the browser's location object.
         window.location.href = result.paymentLinkUrl;
       } else {
         throw new Error(result.error || 'Failed to create payment link.');
@@ -148,10 +146,20 @@ export default function BillingPage() {
         title: 'Payment Failed',
         description: error.message || 'Could not initiate the payment process. Please try again.',
       });
-       // Only set loading to false in case of an error.
-       // On success, the page redirects away anyway.
       setPayingInvoiceId(null);
     }
+  };
+
+  const handleMarkAsPaid = (invoiceId: string) => {
+    if (!firestore) return;
+
+    const invoiceRef = doc(firestore, 'billings', invoiceId);
+    setDocumentNonBlocking(invoiceRef, { paymentStatus: 'paid' }, { merge: true });
+
+    toast({
+        title: "Invoice Updated",
+        description: "The invoice has been marked as paid.",
+    });
   };
 
   const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canManageBillings && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
@@ -253,7 +261,7 @@ export default function BillingPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem>View Details</DropdownMenuItem>
                             <DropdownMenuItem>Send Reminder</DropdownMenuItem>
-                            <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)}>Mark as Paid</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                       )}

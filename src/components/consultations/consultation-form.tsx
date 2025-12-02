@@ -274,22 +274,10 @@ export function ConsultationForm() {
   
         await Promise.all(prescriptionPromises);
       }
-      
-      // Automatically generate a billing record for this consultation
-      if (consultationRef) {
-        const billingData = {
-            patientId: data.patientId,
-            consultationId: consultationRef.id,
-            billingDate: new Date().toISOString(),
-            amount: Math.floor(Math.random() * (5000 - 1000 + 1) + 1000), // Random amount for demo
-            paymentStatus: 'unpaid',
-        };
-        await addDocumentNonBlocking(collection(firestore, "billings"), billingData);
-      }
   
       toast({
         title: "Consultation Saved",
-        description: "The consultation details and invoice have been successfully created.",
+        description: "The consultation details have been successfully saved.",
       });
       form.reset();
       setConsultationDocs([]);
@@ -616,5 +604,3 @@ export function ConsultationForm() {
     </Card>
   );
 }
-
-    

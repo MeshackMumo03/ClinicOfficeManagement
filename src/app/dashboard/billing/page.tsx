@@ -18,7 +18,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, CreditCard, Loader2 } from "lucide-react";
+import { MoreHorizontal, CreditCard, Loader2, PlusCircle } from "lucide-react";
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createPaymentLink } from "@/lib/lipana-actions";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CreateInvoiceDialog } from "@/components/billing/create-invoice-dialog";
 
 
 /**
@@ -69,13 +70,13 @@ export default function BillingPage() {
 
   const { data: invoices, isLoading: billingsLoading } = useCollection(billingsQuery);
 
-  const canViewAllBillings = userRole === 'admin' || userRole === 'receptionist';
+  const canManageBillings = userRole === 'admin' || userRole === 'receptionist';
 
   // Fetch patient data only if needed to resolve names
   const patientsQuery = useMemoFirebase(() => {
-    if (!firestore || !canViewAllBillings) return null;
+    if (!firestore || !canManageBillings) return null;
     return collection(firestore, "patients");
-  }, [firestore, canViewAllBillings]);
+  }, [firestore, canManageBillings]);
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
   // Fetch the patient's own name if they are a patient
@@ -96,13 +97,34 @@ export default function BillingPage() {
       return "Loading...";
   }
 
+  const getPatientPhoneNumber = (patientId: string) => {
+    if (patients) {
+      const patient = patients.find(p => p.id === patientId);
+      return patient?.contactNumber;
+    }
+    return undefined;
+  }
+
   const handlePayment = async (invoice: any) => {
     setPayingInvoiceId(invoice.id);
+    const phoneNumber = getPatientPhoneNumber(invoice.patientId);
+
+    if (!phoneNumber) {
+        toast({
+            variant: 'destructive',
+            title: 'Payment Failed',
+            description: 'Patient phone number is missing. Please have a receptionist update it.',
+        });
+        setPayingInvoiceId(null);
+        return;
+    }
+
     try {
         const result = await createPaymentLink({
             amount: invoice.amount,
-            title: `Invoice #${invoice.id}`,
-            description: `Payment for medical consultation.`,
+            phoneNumber: phoneNumber,
+            title: `Invoice #${invoice.id.substring(0, 8)}`,
+            description: `Payment for medical services.`,
             invoiceId: invoice.id
         });
 
@@ -128,14 +150,14 @@ export default function BillingPage() {
     }
   }
 
-  const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canViewAllBillings && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
+  const pageIsLoading = isUserLoading || isUserDataLoading || billingsLoading || (canManageBillings && patientsLoading) || (userRole === 'patient' && singlePatientLoading);
 
   if (pageIsLoading) {
     return <Loader />;
   }
 
   // Handle case for roles that shouldn't see any billing info (e.g., doctors).
-  if (!canViewAllBillings && userRole !== 'patient') {
+  if (!canManageBillings && userRole !== 'patient') {
     return (
         <div className="flex flex-col gap-8">
             <div>
@@ -158,6 +180,14 @@ export default function BillingPage() {
             Manage invoices and payments.
             </p>
         </div>
+        {canManageBillings && (
+            <CreateInvoiceDialog>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create Invoice
+                </Button>
+            </CreateInvoiceDialog>
+        )}
       </div>
 
       {/* Table section to display invoices. */}
@@ -167,7 +197,7 @@ export default function BillingPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Invoice ID</TableHead>
-                {canViewAllBillings && <TableHead>Patient</TableHead>}
+                {canManageBillings && <TableHead>Patient</TableHead>}
                 <TableHead>Date</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
@@ -180,8 +210,8 @@ export default function BillingPage() {
               {/* Map through invoices to create a table row for each invoice. */}
               {invoices && invoices.length > 0 ? invoices.map((invoice: any) => (
                 <TableRow key={invoice.id}>
-                  <TableCell className="font-medium">{invoice.id}</TableCell>
-                  {canViewAllBillings && <TableCell>{getPatientName(invoice.patientId)}</TableCell>}
+                  <TableCell className="font-medium">{invoice.id.substring(0, 8)}...</TableCell>
+                  {canManageBillings && <TableCell>{getPatientName(invoice.patientId)}</TableCell>}
                   <TableCell>{new Date(invoice.billingDate).toLocaleDateString()}</TableCell>
                   <TableCell>Ksh{invoice.amount.toFixed(2)}</TableCell>
                   <TableCell>
@@ -193,7 +223,7 @@ export default function BillingPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                      {invoice.paymentStatus !== 'paid' && (
+                      {userRole === 'patient' && invoice.paymentStatus !== 'paid' && (
                         <Button 
                             onClick={() => handlePayment(invoice)} 
                             disabled={payingInvoiceId === invoice.id}
@@ -206,7 +236,7 @@ export default function BillingPage() {
                             Pay Now
                         </Button>
                       )}
-                      {userRole !== 'patient' && (
+                      {canManageBillings && (
                         /* Dropdown menu with actions for each invoice. */
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -227,8 +257,8 @@ export default function BillingPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                    <TableCell colSpan={canViewAllBillings ? 6 : 5} className="text-center h-24">
-                        No billing records found. New invoices are created after a consultation.
+                    <TableCell colSpan={canManageBillings ? 6 : 5} className="text-center h-24">
+                        No billing records found.
                     </TableCell>
                 </TableRow>
               )}
@@ -239,5 +269,3 @@ export default function BillingPage() {
     </div>
   );
 }
-
-    

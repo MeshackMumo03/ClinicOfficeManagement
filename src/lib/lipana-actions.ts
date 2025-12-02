@@ -1,3 +1,4 @@
+
 'use server';
 
 import { Lipana } from '@lipana/sdk';
@@ -21,6 +22,7 @@ const lipana = new Lipana({
 
 interface CreatePaymentLinkInput {
     amount: number;
+    phoneNumber: string;
     title: string;
     description: string;
     invoiceId: string;
@@ -38,7 +40,7 @@ interface CreatePaymentLinkOutput {
  * @returns An object containing the success status and the payment link URL or an error message.
  */
 export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<CreatePaymentLinkOutput> {
-  const { amount, title, description, invoiceId } = input;
+  const { amount, phoneNumber, title, description, invoiceId } = input;
   
   // Use a relative URL for success, which will redirect to your own app.
   // We'll need to build out this success page later.
@@ -50,6 +52,7 @@ export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<
       description,
       amount,
       currency: 'KES',
+      phoneNumber,
       allowCustomAmount: false,
       successRedirectUrl: successRedirectUrl
     });

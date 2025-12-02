@@ -35,7 +35,6 @@ interface PatientProfileProps {
  */
 function ConsultationHistory({ patientId }: { patientId: string }) {
     const firestore = useFirestore();
-    const { user } = useUser();
 
     // Fetch all doctors to resolve their names in the consultation history.
     const doctorsQuery = useMemoFirebase(
@@ -44,10 +43,10 @@ function ConsultationHistory({ patientId }: { patientId: string }) {
     );
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
 
-    // This query now fetches all consultations for a given patient,
-    // allowing any authorized staff member (doctor, receptionist, admin) to see the full history.
     const consultationsQuery = useMemoFirebase(() => {
         if (!firestore || !patientId) return null;
+        // This query fetches all consultations for a SPECIFIC patient,
+        // which is allowed by the security rules for authorized staff.
         return query(
             collection(firestore, 'consultations'),
             where('patientId', '==', patientId),

@@ -37,7 +37,6 @@ import { DocumentUploadDialog } from "../patients/document-upload-dialog";
 import { AiTaggingTool } from "../patients/ai-tagging-tool";
 import type { PatientDocument } from "@/lib/document-actions";
 import { Badge } from "../ui/badge";
-import { revalidatePath } from "next/cache";
 
 
 const treatmentSchema = z.object({

@@ -111,8 +111,11 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Allow staff to list consultations, but ONLY if they are querying by patientId.
-      allow list: if (isDoctor() || isReceptionist() || isAdmin()) && request.query.keys().hasOnly(['where', 'orderBy']);
+      // CRITICAL FIX: Allow staff (doctors, receptionists, admins) to list consultations,
+      // but ONLY if the query explicitly filters by a patientId.
+      // This prevents broad, permission-denied queries on the entire collection.
+      allow list: if (isDoctor() || isReceptionist() || isAdmin()) && request.query.where.patientId is string;
+      
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (
           resource.data.patientId == request.auth.uid ||

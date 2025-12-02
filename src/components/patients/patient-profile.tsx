@@ -46,7 +46,7 @@ function ConsultationHistory({ patientId }: { patientId: string }) {
 
     const consultationsQuery = useMemoFirebase(() => {
         if (!firestore || !patientId) return null;
-        // The query MUST filter by patientId to comply with security rules.
+        // CRITICAL FIX: The query MUST filter by patientId to comply with security rules.
         return query(
             collection(firestore, 'consultations'),
             where('patientId', '==', patientId),
@@ -67,7 +67,7 @@ function ConsultationHistory({ patientId }: { patientId: string }) {
     }
 
     if (error) {
-        return <p className="text-destructive">Error loading consultation history: {error.message}</p>;
+        return <p className="text-destructive">Error loading consultation history. This is likely a permission issue. Please check Firestore rules.</p>;
     }
 
     return (

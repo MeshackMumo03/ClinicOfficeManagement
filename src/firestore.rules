@@ -20,7 +20,8 @@ service cloud.firestore {
     }
 
     function isUser(role) {
-      return isSignedIn() && getUserData().role == role;
+      // Check that the user is signed in AND that their user document exists and has the specified role.
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     
     function isAdmin() {
@@ -114,7 +115,7 @@ service cloud.firestore {
       // CRITICAL FIX: Allow staff (doctors, receptionists, admins) to list consultations,
       // but ONLY if the query explicitly filters by a patientId.
       // This prevents broad, permission-denied queries on the entire collection.
-      allow list: if (isDoctor() || isReceptionist() || isAdmin()) && request.query.where.keys().hasAny(['patientId']);
+      allow list: if (isDoctor() || isReceptionist() || isAdmin()) && request.query.where.patientId is string;
       
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (

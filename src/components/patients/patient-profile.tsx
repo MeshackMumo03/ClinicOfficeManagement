@@ -128,8 +128,7 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
         {/* Header with patient's name. */}
         <div className="mb-6 flex justify-between items-start">
             <div>
-                <h1 className="font-headline text-3xl font-bold">Patient Profile</h1>
-                 <p className="text-muted-foreground">{`${patient.firstName} ${patient.lastName}`}</p>
+                <h1 className="font-headline text-3xl font-bold">{`${patient.firstName} ${patient.lastName}`}</h1>
             </div>
             {canManagePatients && <EditPatientDialog patient={patient} />}
         </div>

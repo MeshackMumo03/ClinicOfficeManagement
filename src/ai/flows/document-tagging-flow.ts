@@ -41,7 +41,6 @@ const documentTaggingFlow = ai.defineFlow(
     name: 'documentTaggingFlow',
     inputSchema: DocumentTaggingInputSchema,
     outputSchema: DocumentTaggingOutputSchema,
-    model: 'googleai/gemini-pro-vision', // Use the correct, available model for vision tasks
   },
   async (input) => {
     const { output } = await prompt(input);

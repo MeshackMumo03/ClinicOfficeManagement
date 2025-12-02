@@ -41,7 +41,8 @@ export function AiTaggingTool({
     setSuggestedTags([]);
 
     const input: DocumentTaggingInput = {
-      documentUrl: documentDataUri,
+      documentDataUri: documentDataUri,
+      documentDescription: `Medical document named "${documentName}" for patient ID ${patientId}.`,
     };
 
     try {
@@ -85,14 +86,14 @@ export function AiTaggingTool({
   };
 
   return (
-    <Card className="mt-6 shadow-md border-primary/50 bg-primary/5">
+    <Card className="mt-6 shadow-md border-primary/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Tags className="h-6 w-6 text-primary" />
           AI Document Tagging
         </CardTitle>
         <CardDescription>
-          Document <strong>{documentName}</strong> is uploaded. Let AI suggest relevant tags to make it easier to find later.
+          Document <strong>{documentName}</strong> has been uploaded. Would you like AI to suggest relevant tags?
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -123,7 +124,7 @@ export function AiTaggingTool({
       </CardContent>
       <CardFooter className="flex justify-between items-center bg-primary/5 rounded-b-lg p-4">
          <Button variant="ghost" onClick={onSkip} disabled={isLoading}>
-            Skip
+            Skip for now
         </Button>
         <div className="flex gap-2">
         {suggestedTags.length === 0 ? (
@@ -138,7 +139,7 @@ export function AiTaggingTool({
         ) : (
           <>
             <Button variant="outline" onClick={() => { setSuggestedTags([]); setError(null); }} disabled={isLoading}>
-              Clear
+              Clear Suggestions
             </Button>
             <Button onClick={handleApplyTags} disabled={isLoading}>
               {isApplying ? (

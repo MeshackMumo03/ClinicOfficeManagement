@@ -11,8 +11,14 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const DocumentTaggingInputSchema = z.object({
-  documentUrl: z.string().url().describe('The public URL of the document to analyze.'),
+  documentDataUri: z
+    .string()
+    .describe(
+      "A medical document, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+  documentDescription: z.string().describe('The description of the medical document.'),
 });
+
 
 const DocumentTaggingOutputSchema = z.object({
   tags: z.array(z.string()).describe('A list of 1-3 relevant tags for the document (e.g., "blood test", "x-ray", "MRI report").'),
@@ -33,7 +39,28 @@ const prompt = ai.definePrompt({
     output: { schema: DocumentTaggingOutputSchema },
     prompt: `You are an expert medical archivist. Analyze the following medical document and provide a list of 1-3 concise, relevant tags. Examples: "blood test", "x-ray", "MRI report", "pathology result", "patient summary".
   
-  Document: {{media url=documentUrl}}`,
+  Description: {{{documentDescription}}}
+  Document: {{media url=documentDataUri}}`,
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_ONLY_HIGH',
+      },
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+      {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_LOW_AND_ABOVE',
+      },
+    ],
+  }
 });
   
 const documentTaggingFlow = ai.defineFlow(

@@ -53,6 +53,7 @@ export function CreateInvoiceDialog({ children }: { children: React.ReactNode })
   const { toast } = useToast();
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
 
+  // CRITICAL FIX: Added a check for `firestore` to prevent the query from running before the database is ready.
   const patientsQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, "patients") : null),
     [firestore]
@@ -93,10 +94,11 @@ export function CreateInvoiceDialog({ children }: { children: React.ReactNode })
         amount: data.amount,
         billingDate: new Date().toISOString(),
         paymentStatus: 'unpaid',
+        consultationId: '', // Added to match the schema.
       };
       
       // 2. Save the invoice data to Firestore using setDocumentNonBlocking
-      setDocumentNonBlocking(newInvoiceRef, invoiceData, { merge: false });
+      setDocumentNonBlocking(newInvoiceRef, invoiceData, {});
 
       // 3. If a new phone number was entered, update the corresponding patient record
       if (data.phoneNumber && data.phoneNumber !== selectedPatient?.contactNumber) {

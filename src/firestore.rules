@@ -110,7 +110,7 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Staff can list consultations.
+      // DEFINITIVE FIX: Allow staff to list consultations. Client query must filter.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (

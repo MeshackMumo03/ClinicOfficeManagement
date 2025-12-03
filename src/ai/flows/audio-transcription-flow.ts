@@ -36,7 +36,7 @@ const audioTranscriptionFlow = ai.defineFlow(
   async (input) => {
     // Revert to the previously working model configuration.
     const llmResponse = await ai.generate({
-      model: googleAI('gemini-pro-vision'),
+      model: 'googleai/gemini-pro-vision',
       prompt: [
         {
           media: {

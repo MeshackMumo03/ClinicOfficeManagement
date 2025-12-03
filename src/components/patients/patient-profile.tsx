@@ -67,7 +67,7 @@ function ConsultationHistory({ patientId }: { patientId: string }) {
     }
 
     if (error) {
-        return <p className="text-destructive">Error loading consultation history. This is likely a permission issue. Please check Firestore rules.</p>;
+        return <p className="text-destructive">Error loading consultation history: {error.message}</p>;
     }
 
     return (

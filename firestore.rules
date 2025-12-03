@@ -109,8 +109,9 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Allow read access (get and list) if the user is the patient, doctor, or staff.
-      // This rule structure requires client queries to be filtered.
+      // DEFINITIVE FIX: Use a single 'read' rule.
+      // This allows 'get' and 'list' operations only if the user is the patient,
+      // the doctor, or authorized staff. This forces 'list' queries to be filtered.
       allow read: if isSignedIn() && (
         resource.data.patientId == request.auth.uid ||
         resource.data.doctorId == request.auth.uid ||
@@ -143,14 +144,12 @@ service cloud.firestore {
     }
 
     match /conversations/{conversationId} {
-      // WARNING: This is permissive for development.
-      // In production, you should restrict access to participants only.
-      allow read, write: if isSignedIn();
+      // Allow read/write access only to participants of the conversation.
+      allow read, write: if isSignedIn() && request.auth.uid in resource.data.participants;
 
       match /messages/{messageId} {
-        // WARNING: This is permissive for development.
-        // In production, you should restrict access to participants of the parent conversation.
-        allow read, write: if isSignedIn();
+        // Inherit permissions from the parent conversation document.
+        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
       }
     }
 

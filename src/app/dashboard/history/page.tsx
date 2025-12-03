@@ -18,8 +18,9 @@ function HistoryDisplay({ patientId }: { patientId: string }) {
     );
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
 
+    // DEFINITIVE FIX: This query is now safe because this component will not render
+    // unless `patientId` is a valid, selected ID. The security rules will allow this query.
     const consultationsQuery = useMemoFirebase(() => {
-        // This check is now robust because this component won't render if patientId is null.
         if (!firestore || !patientId) return null;
         return query(
             collection(firestore, 'consultations'),

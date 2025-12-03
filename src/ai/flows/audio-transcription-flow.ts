@@ -33,9 +33,9 @@ const audioTranscriptionFlow = ai.defineFlow(
     outputSchema: AudioTranscriptionOutputSchema,
   },
   async (input) => {
-    // Use the gemini-1.5-flash model which is suitable for transcription.
+    // Use the gemini-1.5-flash-latest model which is suitable for transcription.
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: [
         {
           media: {

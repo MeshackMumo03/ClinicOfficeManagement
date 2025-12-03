@@ -63,7 +63,7 @@ export default function DashboardPage() {
     if (userRole === "patient") {
       return query(appointmentsCollection, where("patientId", "==", user.uid));
     }
-    // CRITICAL FIX: Doctors should only see appointments assigned to them.
+    // Doctors should only see appointments assigned to them.
     if (userRole === 'doctor') {
       return query(appointmentsCollection, where("doctorId", "==", user.uid));
     }

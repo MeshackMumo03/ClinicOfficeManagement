@@ -270,23 +270,24 @@ export function ConsultationForm() {
             paymentStatus: 'unpaid',
         };
         await addDocumentNonBlocking(collection(firestore, 'billings'), billingData);
-      }
+      
 
-      if (data.treatments && data.treatments.length > 0 && consultationRef) {
-        const prescriptionPromises = data.treatments
-            .filter(treatment => treatment.drugName) 
-            .map(treatment => {
-                const prescriptionData = {
-                    consultationId: consultationRef.id,
-                    drugName: treatment.drugName,
-                    dosage: treatment.dosage,
-                    frequency: treatment.instructions, 
-                    notes: treatment.instructions,
-                };
-                return addDocumentNonBlocking(collection(firestore, "prescriptions"), prescriptionData);
-            });
-  
-        await Promise.all(prescriptionPromises);
+        if (data.treatments && data.treatments.length > 0) {
+            const prescriptionPromises = data.treatments
+                .filter(treatment => treatment.drugName) 
+                .map(treatment => {
+                    const prescriptionData = {
+                        consultationId: consultationRef.id,
+                        drugName: treatment.drugName,
+                        dosage: treatment.dosage,
+                        frequency: treatment.instructions, 
+                        notes: treatment.instructions,
+                    };
+                    return addDocumentNonBlocking(collection(firestore, "prescriptions"), prescriptionData);
+                });
+    
+            await Promise.all(prescriptionPromises);
+        }
       }
   
       toast({
@@ -618,3 +619,5 @@ export function ConsultationForm() {
     </Card>
   );
 }
+
+    

@@ -36,7 +36,7 @@ export async function documentTagging(
 
 const prompt = ai.definePrompt({
     name: 'documentTaggingPrompt',
-    model: googleAI('gemini-pro-vision'),
+    model: 'googleai/gemini-2.5-pro',
     input: { schema: DocumentTaggingInputSchema },
     output: { schema: DocumentTaggingOutputSchema },
     prompt: `You are an expert medical archivist. Analyze the following medical document and provide a list of 1-3 concise, relevant tags. Examples: "blood test", "x-ray", "MRI report", "pathology result", "patient summary".

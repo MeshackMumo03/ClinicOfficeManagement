@@ -121,7 +121,7 @@ export default function DashboardPage() {
   // --- 3. LOADING STATE & CALCULATIONS ---
   
   // Determine if the page is still loading any essential data.
-  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || patientsLoading || billingsLoading;
+  const pageIsLoading = isUserAuthLoading || isUserDataLoading || appointmentsLoading || patientsLoading || (userRole !== 'doctor' && billingsLoading);
 
   // Show a full-screen loader while data is being fetched.
   if (pageIsLoading) {

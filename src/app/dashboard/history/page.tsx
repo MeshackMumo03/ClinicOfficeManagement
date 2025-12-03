@@ -129,10 +129,16 @@ export default function HistoryPage() {
                     {patientToDisplay ? (
                         <HistoryDisplay patientId={patientToDisplay} />
                     ) : (
-                        <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
-                            <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
-                            <p className="text-muted-foreground">Select a patient from the list to view their history.</p>
-                        </div>
+                         patients && patients.length > 0 ? (
+                            <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
+                                <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
+                                <p className="text-muted-foreground">Select a patient from the list to view their history.</p>
+                            </div>
+                        ) : (
+                             <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
+                                <p className="text-muted-foreground">There are no patients in the system to display history for.</p>
+                            </div>
+                        )
                     )}
                 </div>
             </div>

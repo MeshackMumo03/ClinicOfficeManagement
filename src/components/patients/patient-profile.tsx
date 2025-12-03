@@ -1,3 +1,4 @@
+
 // Import the Tabs components from ShadCN and other necessary modules.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";

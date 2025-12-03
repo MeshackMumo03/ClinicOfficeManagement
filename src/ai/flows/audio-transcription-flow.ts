@@ -11,6 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 
 const AudioTranscriptionInputSchema = z.object({
@@ -36,7 +37,7 @@ const audioTranscriptionFlow = ai.defineFlow(
   },
   async (input) => {
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-pro-vision',
+      model: googleAI('gemini-pro-vision'),
       prompt: [
         {
           media: {

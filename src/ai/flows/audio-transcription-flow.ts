@@ -36,9 +36,9 @@ const audioTranscriptionFlow = ai.defineFlow(
   },
   async (input) => {
     // CRITICAL FIX: Explicitly use a model that supports audio transcription.
-    // The previous models were not found; switching to the reliable 'gemini-1.5-pro-latest'.
+    // The previous models were not found; switching to the reliable 'gemini-1.5-flash-latest'.
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-1.5-pro-latest',
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: [
         {
           media: {
@@ -55,4 +55,3 @@ const audioTranscriptionFlow = ai.defineFlow(
     return { transcript: llmResponse.text };
   }
 );
-

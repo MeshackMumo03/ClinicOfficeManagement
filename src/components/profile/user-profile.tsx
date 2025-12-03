@@ -6,10 +6,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "./info-card";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { EditProfileDialog } from "./edit-profile-dialog";
 import { ShieldCheck } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { collection, query, where, orderBy } from "firebase/firestore";
+import { Loader } from "../layout/loader";
 
 // Define the shape of the user object
 type User = {
@@ -20,11 +23,79 @@ type User = {
   registrationNumber?: string;
   workId?: string;
   photoURL?: string;
+  verified?: boolean;
 };
 
 interface UserProfileProps {
   user: User;
 }
+
+/**
+ * A component to display the consultation history for the logged-in user.
+ * It fetches consultations where the user's ID matches the patientId or doctorId.
+ */
+function UserConsultationHistory() {
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const consultationsQuery = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        // This query now correctly fetches consultations where the logged-in user is the patient.
+        return query(
+            collection(firestore, 'consultations'),
+            where('patientId', '==', user.uid),
+            orderBy('consultationDateTime', 'desc')
+        );
+    }, [firestore, user]);
+
+    const { data: consultations, isLoading, error } = useCollection(consultationsQuery);
+    
+    // Fetch all doctors to resolve names, this is fine as doctor list is public.
+    const doctorsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'doctors') : null, [firestore]);
+    const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
+
+    const getDoctorName = (doctorId: string) => {
+        if (!doctors) return "Loading...";
+        const doctor = doctors.find((d: any) => d.id === doctorId);
+        return doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : "Unknown Doctor";
+    };
+
+    if (isLoading || doctorsLoading) {
+        return <div className="flex justify-center items-center h-40"><Loader /></div>;
+    }
+
+    if (error) {
+        return <p className="text-destructive">Error loading your consultation history. Please check permissions.</p>;
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>My Consultation History</CardTitle>
+                <CardDescription>A record of all your past consultations.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {consultations && consultations.length > 0 ? (
+                    <div className="space-y-4">
+                        {consultations.map((c: any) => (
+                            <div key={c.id} className="border p-4 rounded-lg bg-muted/20">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="font-semibold">{new Date(c.consultationDateTime).toLocaleDateString()}</h4>
+                                    <span className="text-sm text-muted-foreground">{getDoctorName(c.doctorId)}</span>
+                                </div>
+                                <p className="font-medium">Diagnosis: <span className="font-normal">{c.diagnosis || 'N/A'}</span></p>
+                                {c.notes && <p className="text-sm text-muted-foreground mt-2"><strong>Notes:</strong> {c.notes}</p>}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-muted-foreground text-center py-8">You have no consultation history.</p>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
 
 /**
  * A utility function to get initials from a name.
@@ -52,7 +123,7 @@ const roleColors = {
  * @param {UserProfileProps} props The properties for the component.
  */
 export function UserProfile({ user }: UserProfileProps) {
-  const { name, email, role, photoURL, registrationNumber, workId } = user;
+  const { name, email, role, photoURL, registrationNumber, workId, verified } = user;
   const avatarFallback = getInitials(name);
 
   const personalInfo = [
@@ -83,34 +154,54 @@ export function UserProfile({ user }: UserProfileProps) {
             <Badge className={cn("text-sm capitalize", roleColorClass)}>
                 {role}
             </Badge>
+            { (role === 'doctor' || role === 'receptionist') && verified && (
+                 <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    <ShieldCheck className="mr-1 h-3 w-3" />
+                    Verified
+                </Badge>
+            )}
           </div>
           <p className="text-muted-foreground">{email}</p>
         </div>
         <EditProfileDialog user={user} />
       </div>
 
-      {/* Profile Details */}
-      <div className="space-y-6">
-        <InfoCard title="Personal Information" items={personalInfo} />
-        
-        {role === 'admin' && (
-             <Card>
-             <CardHeader className="flex flex-row items-center gap-4">
-               <ShieldCheck className="h-8 w-8 text-role-admin" />
-               <CardTitle className="text-xl">Admin Privileges</CardTitle>
-             </CardHeader>
-             <CardContent>
-               <p className="text-muted-foreground">
-                 As an administrator, you have full access to all system features, including user management, billing, and reports.
-               </p>
-             </CardContent>
-           </Card>
-        )}
+      {/* Profile Details Tabs */}
+      <Tabs defaultValue="personal-info">
+        <TabsList className="mb-6">
+          <TabsTrigger value="personal-info">Personal Info</TabsTrigger>
+          {role === 'patient' && <TabsTrigger value="consultation-history">Consultation History</TabsTrigger>}
+        </TabsList>
 
-        {role !== 'admin' && roleSpecificInfo.some(item => item.value) && (
-            <InfoCard title="Professional Information" items={roleSpecificInfo} />
+        <TabsContent value="personal-info">
+            <div className="space-y-6">
+                <InfoCard title="Personal Information" items={personalInfo} />
+                
+                {role === 'admin' && (
+                    <Card>
+                    <CardHeader className="flex flex-row items-center gap-4">
+                        <ShieldCheck className="h-8 w-8 text-role-admin" />
+                        <CardTitle className="text-xl">Admin Privileges</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground">
+                        As an administrator, you have full access to all system features, including user management, billing, and reports.
+                        </p>
+                    </CardContent>
+                    </Card>
+                )}
+
+                {role !== 'admin' && roleSpecificInfo.some(item => item.value) && (
+                    <InfoCard title="Professional Information" items={roleSpecificInfo} />
+                )}
+            </div>
+        </TabsContent>
+        {role === 'patient' && (
+            <TabsContent value="consultation-history">
+                <UserConsultationHistory />
+            </TabsContent>
         )}
-      </div>
+      </Tabs>
     </div>
   );
 }

@@ -1,10 +1,6 @@
 
 // Import the Tabs components from ShadCN and other necessary modules.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
-import { Loader } from "../layout/loader";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { EditPatientDialog } from "./edit-patient-dialog";
 import { DocumentManager } from "./document-manager";
 
@@ -26,76 +22,6 @@ export type Patient = {
 interface PatientProfileProps {
   patient: Patient;
   canManagePatients: boolean;
-}
-
-/**
- * A component to display the consultation history for a patient.
- * It shows all consultations for the patient, accessible by authorized staff.
- * @param {object} props - The properties for the component.
- * @param {string} props.patientId - The ID of the patient.
- */
-function ConsultationHistory({ patientId }: { patientId: string }) {
-    const firestore = useFirestore();
-
-    // Fetch all doctors to resolve their names in the consultation history.
-    const doctorsQuery = useMemoFirebase(
-      () => (firestore ? collection(firestore, "doctors") : null),
-      [firestore]
-    );
-    const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
-
-    const consultationsQuery = useMemoFirebase(() => {
-        if (!firestore || !patientId) return null;
-        // CRITICAL FIX: The query MUST filter by patientId to comply with security rules.
-        return query(
-            collection(firestore, 'consultations'),
-            where('patientId', '==', patientId),
-            orderBy('consultationDateTime', 'desc')
-        );
-    }, [firestore, patientId]);
-
-    const { data: consultations, isLoading, error } = useCollection(consultationsQuery);
-
-    const getDoctorName = (doctorId: string) => {
-        if (!doctors) return "Loading...";
-        const doctor = doctors.find((d: any) => d.id === doctorId);
-        return doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : "Unknown Doctor";
-    };
-
-    if (isLoading || doctorsLoading) {
-        return <div className="flex justify-center items-center h-40"><Loader /></div>;
-    }
-
-    if (error) {
-        return <p className="text-destructive">Error loading consultation history: {error.message}</p>;
-    }
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Consultation History</CardTitle>
-                <CardDescription>A record of all past consultations for this patient.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {consultations && consultations.length > 0 ? (
-                    <div className="space-y-4">
-                        {consultations.map((c: any) => (
-                            <div key={c.id} className="border p-4 rounded-lg bg-muted/20">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="font-semibold">{new Date(c.consultationDateTime).toLocaleDateString()}</h4>
-                                    <span className="text-sm text-muted-foreground">{getDoctorName(c.doctorId)}</span>
-                                </div>
-                                <p className="font-medium">Diagnosis: <span className="font-normal">{c.diagnosis || 'N/A'}</span></p>
-                                {c.notes && <p className="text-sm text-muted-foreground mt-2"><strong>Notes:</strong> {c.notes}</p>}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-muted-foreground text-center py-8">No consultation history found for this patient.</p>
-                )}
-            </CardContent>
-        </Card>
-    );
 }
 
 /**
@@ -136,7 +62,6 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
       <Tabs defaultValue="personal-info">
         <TabsList className="mb-6">
           <TabsTrigger value="personal-info">Personal Info</TabsTrigger>
-          <TabsTrigger value="consultation-history">Consultation History</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
           <TabsTrigger value="billing-records">Billing Records</TabsTrigger>
@@ -163,10 +88,6 @@ export function PatientProfile({ patient, canManagePatients }: PatientProfilePro
                 </div>
             </div>
           </div>
-        </TabsContent>
-        {/* Consultation history tab content. */}
-        <TabsContent value="consultation-history">
-            <ConsultationHistory patientId={patient.id} />
         </TabsContent>
         <TabsContent value="documents">
             <DocumentManager patientId={patient.id} canManage={canManageDocs} />

@@ -34,6 +34,7 @@ const allNavLinks = [
     { href: "/dashboard/appointments", label: "Appointments", roles: ["admin", "doctor", "receptionist", "patient"] },
     { href: "/dashboard/patients", label: "Patients", roles: ["admin", "doctor", "receptionist"] },
     { href: "/dashboard/consultations", label: "Consultations", roles: ["admin", "doctor"] },
+    { href: "/dashboard/history", label: "History", roles: ["admin", "doctor", "receptionist", "patient"] },
     { href: "/dashboard/billing", label: "Billing", roles: ["admin", "receptionist", "patient"] },
     { href: "/dashboard/reports", label: "Reports", roles: ["admin"] },
     { href: "/dashboard/chat", label: "Messages", roles: ["admin", "doctor", "receptionist", "patient"] },
@@ -229,5 +230,3 @@ export function Header() {
     </header>
   );
 }
-
-    

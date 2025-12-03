@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const AudioTranscriptionInputSchema = z.object({
   audioDataUri: z.string().describe("A Base64-encoded audio chunk with a data URI header (e.g., 'data:audio/webm;base64,...')."),
@@ -34,9 +33,9 @@ const audioTranscriptionFlow = ai.defineFlow(
     outputSchema: AudioTranscriptionOutputSchema,
   },
   async (input) => {
-    // Use the gemini-pro-vision model, which is a powerful multimodal endpoint capable of handling audio.
+    // Use the user-specified gemini-2.5-pro model for transcription.
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-pro-vision',
+      model: 'googleai/gemini-2.5-pro',
       prompt: [
         {
           media: {

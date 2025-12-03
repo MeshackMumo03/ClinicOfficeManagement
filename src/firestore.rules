@@ -110,12 +110,15 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // A user can read/write a consultation if they are the patient or the doctor involved,
-      // or if they are staff. This rule allows for filtered list queries by patient or doctor.
-      allow read, write: if isSignedIn() &&
-          ( (resource.data.patientId == request.auth.uid) ||
-            (resource.data.doctorId == request.auth.uid) ||
-             isReceptionist() || isDoctor() || isAdmin() );
+      // Allow read (get and list) if the user is the patient, the doctor, or staff.
+      // For list queries, the client MUST filter by patientId or doctorId.
+      allow read: if isSignedIn() &&
+          (resource.data.patientId == request.auth.uid ||
+           resource.data.doctorId == request.auth.uid ||
+           isReceptionist() || isDoctor() || isAdmin());
+
+      // Only doctors and admins can create, update, or delete consultations.
+      allow write: if isDoctor() || isAdmin();
     }
 
     match /prescriptions/{prescriptionId} {

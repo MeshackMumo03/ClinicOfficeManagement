@@ -109,21 +109,17 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // For reading a SPECIFIC consultation document (resource.data exists)
-      allow get: if isSignedIn() && (
+      // This single read rule applies to both get and list operations.
+      // It ensures that any query will only return documents that meet these criteria.
+      allow read: if isSignedIn() && (
         resource.data.patientId == request.auth.uid ||
         resource.data.doctorId == request.auth.uid ||
-        isReceptionist() || 
-        isDoctor() || 
+        isReceptionist() ||
+        isDoctor() ||
         isAdmin()
       );
       
-      // For listing consultations (resource.data doesn't exist yet)
-      // Allow authenticated users to attempt queries
-      // Client MUST filter by patientId or doctorId in their query
-      allow list: if isSignedIn();
-      
-      // Only doctors and admins can create, update, or delete consultations
+      // Only doctors and admins can create, update, or delete consultations.
       allow write: if isDoctor() || isAdmin();
     }
 

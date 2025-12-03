@@ -110,22 +110,18 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // Patients can list THEIR OWN consultations by filtering on their patientId.
-      // Staff (doctors, receptionists, admins) can list consultations for ANY patient,
-      // but ONLY if the query explicitly filters by a patientId.
-      allow list: if isSignedIn() && (
-        (isPatient() && request.query.where.patientId == request.auth.uid) ||
-        ((isDoctor() || isReceptionist() || isAdmin()) && request.query.where.patientId is string)
-      );
+      // Allow read (get and list) if the user is the patient, the doctor, or staff.
+      // This combined rule ensures that list queries are secure. For a list operation, 
+      // Firestore checks this rule against *every potential document* in the query.
+      // This means a client query MUST include a `where` clause (e.g., `where('patientId', '==', uid)`)
+      // that limits the result set to only documents the user is allowed to read.
+      allow read: if isSignedIn() &&
+          (resource.data.patientId == request.auth.uid ||
+           resource.data.doctorId == request.auth.uid ||
+           isReceptionist() || isDoctor() || isAdmin());
 
-      // The specific patient or doctor involved can get their own consultation, and staff can get any.
-      allow get: if isSignedIn() && (
-          resource.data.patientId == request.auth.uid ||
-          resource.data.doctorId == request.auth.uid ||
-          isDoctor() || isReceptionist() || isAdmin()
-      );
-      // Only doctors and admins can create, update or delete consultations.
-      allow create, update, delete: if isDoctor() || isAdmin();
+      // Only doctors and admins can create, update, or delete consultations.
+      allow write: if isDoctor() || isAdmin();
     }
 
     match /prescriptions/{prescriptionId} {

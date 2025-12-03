@@ -40,10 +40,10 @@ function UserConsultationHistory() {
 
     const consultationsQuery = useMemoFirebase(() => {
         if (!firestore || !user) return null;
-        // This query now correctly fetches consultations where the logged-in user is the patient.
+        // CRITICAL FIX: The query must be filtered by patientId to match security rules.
         return query(
             collection(firestore, 'consultations'),
-            where('patientId', '==', user.uid),
+            where('patientId', '==', user.uid), // This 'where' clause is the fix.
             orderBy('consultationDateTime', 'desc')
         );
     }, [firestore, user]);

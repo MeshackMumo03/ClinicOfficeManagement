@@ -79,6 +79,20 @@ export function DocumentManager({ patientId, canManage }: DocumentManagerProps) 
         }
     };
 
+    const formatDate = (timestamp: any) => {
+        if (!timestamp) return "Invalid Date";
+        // Firestore timestamps have a toDate() method.
+        if (typeof timestamp.toDate === 'function') {
+            return timestamp.toDate().toLocaleDateString();
+        }
+        // Fallback for string or number representations.
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) {
+            return "Invalid Date";
+        }
+        return date.toLocaleDateString();
+    };
+
 
     return (
         <Card>
@@ -141,7 +155,7 @@ export function DocumentManager({ patientId, canManage }: DocumentManagerProps) 
                                                 </div>
                                             </TableCell>
                                             <TableCell className="hidden md:table-cell">
-                                                {new Date(docData.uploadDateTime).toLocaleDateString()}
+                                                {formatDate(docData.uploadDateTime)}
                                             </TableCell>
                                             <TableCell className="text-right space-x-2">
                                                 <Button variant="outline" size="sm" asChild>

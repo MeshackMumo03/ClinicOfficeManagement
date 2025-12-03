@@ -19,7 +19,7 @@ function HistoryDisplay({ patientId }: { patientId: string }) {
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
 
     const consultationsQuery = useMemoFirebase(() => {
-        // CRITICAL FIX: Ensure patientId is present before creating the query.
+        // This check is now robust because this component won't render if patientId is null.
         if (!firestore || !patientId) return null;
         return query(
             collection(firestore, 'consultations'),
@@ -133,11 +133,11 @@ export default function HistoryPage() {
                             <p className="text-muted-foreground">No patients found.</p>
                         </div>
                     )}
-                    {/* Only render HistoryDisplay if a patient ID is actually selected */}
+                    {/* CRITICAL FIX: Only render HistoryDisplay if a patient ID is actually selected */}
                     {selectedPatientId ? (
                         <HistoryDisplay patientId={selectedPatientId} />
                     ) : (
-                         <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
+                         <div className="border rounded-lg bg-card text-card-foreground p-6 text-center h-full flex flex-col justify-center items-center">
                             <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
                             <p className="text-muted-foreground">Select a patient from the list to view their history.</p>
                         </div>
@@ -159,3 +159,4 @@ export default function HistoryPage() {
         </Card>
     );
 }
+

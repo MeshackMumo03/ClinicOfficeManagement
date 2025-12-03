@@ -19,6 +19,7 @@ function HistoryDisplay({ patientId }: { patientId: string }) {
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
 
     const consultationsQuery = useMemoFirebase(() => {
+        // CRITICAL FIX: Ensure patientId is present before creating the query.
         if (!firestore || !patientId) return null;
         return query(
             collection(firestore, 'consultations'),
@@ -47,7 +48,7 @@ function HistoryDisplay({ patientId }: { patientId: string }) {
         <Card>
             <CardHeader>
                 <CardTitle>Consultation History</CardTitle>
-                <CardDescription>A record of all past consultations.</CardDescription>
+                <CardDescription>A record of all past consultations for the selected patient.</CardDescription>
             </CardHeader>
             <CardContent>
                 {consultations && consultations.length > 0 ? (
@@ -93,6 +94,13 @@ export default function HistoryPage() {
 
     const isLoading = isUserLoading || isUserDataLoading || (canViewAllPatients && patientsLoading);
 
+    // Effect to set the initial patient if one isn't selected
+    useEffect(() => {
+        if (!selectedPatientId && patients && patients.length > 0) {
+            setSelectedPatientId(patients[0].id);
+        }
+    }, [patients, selectedPatientId]);
+
     if (isLoading) {
         return <Loader />;
     }
@@ -104,14 +112,13 @@ export default function HistoryPage() {
                     <h1 className="font-headline text-3xl md:text-4xl">My History</h1>
                     <p className="text-muted-foreground">Review your past consultations.</p>
                 </div>
+                {/* For a patient, their user ID is their patient ID */}
                 <HistoryDisplay patientId={user!.uid} />
             </div>
         )
     }
 
     if (canViewAllPatients) {
-        const patientToDisplay = selectedPatientId || (patients && patients.length > 0 ? patients[0].id : null);
-
         return (
             <div className="flex flex-col gap-8">
                 <div>
@@ -119,26 +126,21 @@ export default function HistoryPage() {
                     <p className="text-muted-foreground">Select a patient to view their history.</p>
                 </div>
                 <div className="grid md:grid-cols-[350px_1fr] gap-8 items-start">
-                    {patients ? (
-                        <PatientList patients={patients} selectedPatientId={patientToDisplay} onSelectPatient={setSelectedPatientId} />
+                    {patients && patients.length > 0 ? (
+                        <PatientList patients={patients} selectedPatientId={selectedPatientId} onSelectPatient={setSelectedPatientId} />
                     ) : (
                         <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
                             <p className="text-muted-foreground">No patients found.</p>
                         </div>
                     )}
-                    {patientToDisplay ? (
-                        <HistoryDisplay patientId={patientToDisplay} />
+                    {/* Only render HistoryDisplay if a patient ID is actually selected */}
+                    {selectedPatientId ? (
+                        <HistoryDisplay patientId={selectedPatientId} />
                     ) : (
-                         patients && patients.length > 0 ? (
-                            <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
-                                <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
-                                <p className="text-muted-foreground">Select a patient from the list to view their history.</p>
-                            </div>
-                        ) : (
-                             <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
-                                <p className="text-muted-foreground">There are no patients in the system to display history for.</p>
-                            </div>
-                        )
+                         <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
+                            <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
+                            <p className="text-muted-foreground">Select a patient from the list to view their history.</p>
+                        </div>
                     )}
                 </div>
             </div>

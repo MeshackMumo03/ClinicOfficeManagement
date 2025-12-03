@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, addDoc } from "firebase/firestore";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "../layout/loader";
@@ -73,7 +73,6 @@ export function ConsultationForm() {
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -123,12 +122,10 @@ export function ConsultationForm() {
     name: "treatments",
   });
 
-  const blobToBase64 = (blob: Blob): Promise<string> => {
+  const blobToDataUri = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => {
-            resolve(reader.result as string);
-        };
+        reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(blob);
     });
@@ -185,7 +182,6 @@ export function ConsultationForm() {
 
         mediaRecorderRef.current.onstop = () => {
             const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-            setAudioBlob(audioBlob);
             handleTranscription(audioBlob);
         };
 
@@ -213,12 +209,12 @@ export function ConsultationForm() {
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
     try {
-        const base64Audio = (await blobToBase64(blob)).split(',')[1];
-        const result = await audioTranscription({ audioB64: base64Audio });
+        const audioDataUri = await blobToDataUri(blob);
+        const result = await audioTranscription({ audioDataUri });
         
         if (result.transcript) {
             const currentNotes = form.getValues('notes');
-            form.setValue('notes', currentNotes ? `${currentNotes}\n${result.transcript}` : result.transcript);
+            form.setValue('notes', currentNotes ? `${currentNotes}\n\n--- Audio Transcription ---\n${result.transcript}` : result.transcript);
             toast({
                 title: "Transcription Successful",
                 description: "Your audio has been transcribed and added to the notes.",
@@ -246,7 +242,11 @@ export function ConsultationForm() {
     }
   
     try {
+      const consultationCollection = collection(firestore, "consultations");
+      const newConsultationRef = doc(consultationCollection);
+
       const consultationData = {
+        id: newConsultationRef.id,
         patientId: data.patientId,
         doctorId: user.uid,
         consultationDateTime: new Date().toISOString(),
@@ -258,36 +258,34 @@ export function ConsultationForm() {
         labResults: data.labResults,
       };
   
-      const consultationRef = await addDocumentNonBlocking(collection(firestore, "consultations"), consultationData);
+      await addDocumentNonBlocking(consultationCollection, consultationData);
   
-      if (consultationRef) {
-        // Automatically create a billing record for this consultation
-        const billingData = {
-            patientId: data.patientId,
-            consultationId: consultationRef.id,
-            billingDate: new Date().toISOString(),
-            amount: Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000, // Random amount between 1000-5000
-            paymentStatus: 'unpaid',
-        };
-        await addDocumentNonBlocking(collection(firestore, 'billings'), billingData);
-      
-
-        if (data.treatments && data.treatments.length > 0) {
-            const prescriptionPromises = data.treatments
-                .filter(treatment => treatment.drugName) 
-                .map(treatment => {
-                    const prescriptionData = {
-                        consultationId: consultationRef.id,
-                        drugName: treatment.drugName,
-                        dosage: treatment.dosage,
-                        frequency: treatment.instructions, 
-                        notes: treatment.instructions,
-                    };
-                    return addDocumentNonBlocking(collection(firestore, "prescriptions"), prescriptionData);
-                });
+      // Automatically create a billing record for this consultation
+      const billingData = {
+          patientId: data.patientId,
+          consultationId: newConsultationRef.id,
+          billingDate: new Date().toISOString(),
+          amount: Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000, // Random amount between 1000-5000
+          paymentStatus: 'unpaid',
+      };
+      await addDocumentNonBlocking(collection(firestore, 'billings'), billingData);
     
-            await Promise.all(prescriptionPromises);
-        }
+
+      if (data.treatments && data.treatments.length > 0) {
+          const prescriptionPromises = data.treatments
+              .filter(treatment => treatment.drugName) 
+              .map(treatment => {
+                  const prescriptionData = {
+                      consultationId: newConsultationRef.id,
+                      drugName: treatment.drugName,
+                      dosage: treatment.dosage,
+                      frequency: treatment.instructions, 
+                      notes: treatment.instructions,
+                  };
+                  return addDocumentNonBlocking(collection(firestore, "prescriptions"), prescriptionData);
+              });
+  
+          await Promise.all(prescriptionPromises);
       }
   
       toast({
@@ -619,5 +617,3 @@ export function ConsultationForm() {
     </Card>
   );
 }
-
-    

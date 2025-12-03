@@ -13,7 +13,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const AudioTranscriptionInputSchema = z.object({
-  audioB64: z.string().describe("A Base64-encoded audio chunk."),
+  audioDataUri: z.string().describe("A Base64-encoded audio chunk with a data URI header (e.g., 'data:audio/webm;base64,...')."),
 });
 export type AudioTranscriptionInput = z.infer<typeof AudioTranscriptionInputSchema>;
 
@@ -33,17 +33,17 @@ const audioTranscriptionFlow = ai.defineFlow(
     outputSchema: AudioTranscriptionOutputSchema,
   },
   async (input) => {
-    // Use the gemini-1.5-flash-latest model which is suitable for transcription.
+    // Use the gemini-1.5-flash-latest model which is suitable for multimodal tasks like transcription.
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest',
       prompt: [
         {
           media: {
-            url: `data:audio/webm;base64,${input.audioB64}`,
+            url: input.audioDataUri,
           },
         },
         {
-          text: "Transcribe the following audio:"
+          text: "Transcribe the following audio recording from a doctor's consultation:"
         }
       ],
     });

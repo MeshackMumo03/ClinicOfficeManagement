@@ -34,7 +34,7 @@ const audioTranscriptionFlow = ai.defineFlow(
     outputSchema: AudioTranscriptionOutputSchema,
   },
   async (input) => {
-    // Revert to the previously working model configuration.
+    // Use the gemini-pro-vision model, which is a powerful multimodal endpoint capable of handling audio.
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-pro-vision',
       prompt: [

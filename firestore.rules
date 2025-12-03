@@ -43,10 +43,8 @@ service cloud.firestore {
     // ======== COLLECTION RULES ========
 
     match /users/{userId} {
-      // CRITICAL FIX: Allow any signed-in user to read their OWN profile.
-      // This is essential for the helper functions (isDoctor, isAdmin, etc.) to work correctly.
+      // Allow users to read their own profile and admins to read any.
       allow get: if isOwner(userId) || isAdmin();
-      
       // A user can create their own profile. An admin can create any.
       allow create: if isOwner(userId) || isAdmin();
       // A user can update their own profile. An admin can update any.
@@ -62,7 +60,6 @@ service cloud.firestore {
         allow get, list: if isOwner(userId) || isDoctor() || isReceptionist() || isAdmin();
         
         // Let any authenticated user create a document.
-        // This is needed for patients to upload their own, and staff to upload on their behalf.
         allow create: if isSignedIn();
 
         // Only the owner, doctors, receptionists, or admins can update or delete.
@@ -73,7 +70,7 @@ service cloud.firestore {
     match /patients/{patientId} {
       // A patient can get their own record. Doctors, Receptionists, and Admins can get any patient record.
       allow get: if (isPatient() && isOwner(patientId)) || isDoctor() || isReceptionist() || isAdmin();
-      // CRITICAL FIX: Allow staff to list all patients. This was too broad before, now it's necessary for patient selection forms.
+      // Allow staff to list all patients.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       // Patients can create their own record on signup. Staff can create new patients.
       allow create: if isOwner(patientId) || isReceptionist() || isAdmin();
@@ -104,7 +101,7 @@ service cloud.firestore {
         isAdmin()
       );
       // Let any authenticated user attempt to list appointments.
-      // The client query is responsible for correctly filtering (e.g., patient sees their own).
+      // The client query is responsible for correctly filtering.
       allow list: if isSignedIn();
       // Any authenticated user can create appointments.
       allow create: if isSignedIn();
@@ -113,10 +110,14 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // CRITICAL FIX: Allow staff (doctors, receptionists, admins) to list consultations,
-      // but ONLY if the query explicitly filters by a patientId. This prevents broad, non-performant queries.
-      // Also allows patients to list their own consultations by filtering on their patientId.
-      allow list: if isSignedIn() && request.query.where.patientId is string;
+      // Patients can list THEIR OWN consultations by filtering on their patientId.
+      // Staff (doctors, receptionists, admins) can list consultations for ANY patient,
+      // but ONLY if the query explicitly filters by a patientId.
+      allow list: if isSignedIn() && 
+                    (
+                      (isPatient() && request.query.where.patientId == request.auth.uid) ||
+                      ( (isDoctor() || isReceptionist() || isAdmin()) && request.query.where.patientId is string )
+                    );
 
       // The specific patient or doctor involved can get their own consultation, and staff can get any.
       allow get: if isSignedIn() && (

@@ -111,7 +111,10 @@ service cloud.firestore {
 
     match /consultations/{consultationId} {
       // Allow read (get and list) if the user is the patient, the doctor, or staff.
-      // For list queries, the client MUST filter by patientId or doctorId.
+      // This combined rule ensures that list queries are secure. For a list operation, 
+      // Firestore checks this rule against *every potential document* in the query.
+      // This means a client query MUST include a `where` clause (e.g., `where('patientId', '==', uid)`)
+      // that limits the result set to only documents the user is allowed to read.
       allow read: if isSignedIn() &&
           (resource.data.patientId == request.auth.uid ||
            resource.data.doctorId == request.auth.uid ||

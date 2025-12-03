@@ -11,8 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
-
 
 const AudioTranscriptionInputSchema = z.object({
   audioB64: z.string().describe("A Base64-encoded audio chunk."),
@@ -23,7 +21,6 @@ const AudioTranscriptionOutputSchema = z.object({
   transcript: z.string().describe("The transcribed text from the audio."),
 });
 export type AudioTranscriptionOutput = z.infer<typeof AudioTranscriptionOutputSchema>;
-
 
 export async function audioTranscription(input: AudioTranscriptionInput): Promise<AudioTranscriptionOutput> {
   return audioTranscriptionFlow(input);
@@ -36,9 +33,9 @@ const audioTranscriptionFlow = ai.defineFlow(
     outputSchema: AudioTranscriptionOutputSchema,
   },
   async (input) => {
-    // Revert to the previously working model configuration.
+    // Use the gemini-1.5-flash model which is suitable for transcription.
     const llmResponse = await ai.generate({
-      model: googleAI('gemini-pro-vision'),
+      model: 'googleai/gemini-1.5-flash',
       prompt: [
         {
           media: {

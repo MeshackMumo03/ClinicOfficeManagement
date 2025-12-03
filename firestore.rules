@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -72,7 +73,7 @@ service cloud.firestore {
       // Allow staff to list all patients.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       // Patients can create their own record on signup. Staff can create new patients.
-      allow create: if isOwner(patientId) || isReceptionist() || isAdmin();
+      allow create: if (isPatient() && isOwner(patientId)) || isReceptionist() || isAdmin();
       // Only staff can update patient records.
       allow update: if isReceptionist() || isDoctor() || isAdmin();
       // Only Admins can delete patient records.
@@ -109,9 +110,8 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // DEFINITIVE FIX: Use a single 'read' rule.
-      // This allows 'get' and 'list' operations only if the user is the patient,
-      // the doctor, or authorized staff. This forces 'list' queries to be filtered.
+      // This rule allows 'get' and 'list' operations only if the user is the patient,
+      // the doctor, or authorized staff. This forces 'list' queries to be correctly filtered on the client.
       allow read: if isSignedIn() && (
         resource.data.patientId == request.auth.uid ||
         resource.data.doctorId == request.auth.uid ||

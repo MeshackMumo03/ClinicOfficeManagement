@@ -93,12 +93,11 @@ export default function HistoryPage() {
 
     const isLoading = isUserLoading || isUserDataLoading || (canViewAllPatients && patientsLoading);
 
-    // Effect to set the initial patient if one isn't selected and patients are loaded
     useEffect(() => {
-        if (!selectedPatientId && patients && patients.length > 0) {
+        if (!selectedPatientId && patients && patients.length > 0 && canViewAllPatients) {
             setSelectedPatientId(patients[0].id);
         }
-    }, [patients, selectedPatientId]);
+    }, [patients, selectedPatientId, canViewAllPatients]);
 
     if (isLoading) {
         return <Loader />;
@@ -133,7 +132,6 @@ export default function HistoryPage() {
                         </div>
                     )}
                     
-                    {/* CRITICAL FIX: Only render HistoryDisplay if a patient ID is actually selected */}
                     {selectedPatientId ? (
                         <HistoryDisplay patientId={selectedPatientId} />
                     ) : (

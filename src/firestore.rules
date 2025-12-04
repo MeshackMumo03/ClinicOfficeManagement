@@ -120,8 +120,8 @@ service cloud.firestore {
       );
 
       // Allow staff to perform LIST queries (which is required for the history page).
-      // The client query MUST filter by patientId or doctorId to prevent over-fetching.
       // This rule just allows the query operation itself to proceed.
+      // The client query MUST filter by patientId or doctorId to prevent over-fetching.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       
       // Only doctors and admins can create, update, or delete consultations

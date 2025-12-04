@@ -18,8 +18,6 @@ function HistoryDisplay({ patientId }: { patientId: string }) {
     );
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
 
-    // This query is now safe because this component will only render
-    // if `patientId` is a valid, selected ID.
     const consultationsQuery = useMemoFirebase(() => {
         if (!firestore || !patientId) return null;
         return query(
@@ -95,7 +93,7 @@ export default function HistoryPage() {
 
     const isLoading = isUserLoading || isUserDataLoading || (canViewAllPatients && patientsLoading);
 
-    // Effect to set the initial patient if one isn't selected
+    // Effect to set the initial patient if one isn't selected and patients are loaded
     useEffect(() => {
         if (!selectedPatientId && patients && patients.length > 0) {
             setSelectedPatientId(patients[0].id);
@@ -113,7 +111,7 @@ export default function HistoryPage() {
                     <h1 className="font-headline text-3xl md:text-4xl">My History</h1>
                     <p className="text-muted-foreground">Review your past consultations.</p>
                 </div>
-                {/* For a patient, their user ID is their patient ID */}
+                {/* For a patient, their user ID is their patient ID, which is safe to pass directly */}
                 <HistoryDisplay patientId={user!.uid} />
             </div>
         )
@@ -134,13 +132,14 @@ export default function HistoryPage() {
                             <p className="text-muted-foreground">No patients found.</p>
                         </div>
                     )}
-                    {/* Only render HistoryDisplay if a patient ID is actually selected */}
+                    
+                    {/* CRITICAL FIX: Only render HistoryDisplay if a patient ID is actually selected */}
                     {selectedPatientId ? (
                         <HistoryDisplay patientId={selectedPatientId} />
                     ) : (
                          <div className="border rounded-lg bg-card text-card-foreground p-6 text-center h-full flex flex-col justify-center items-center">
                             <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
-                            <p className="text-muted-foreground">Select a patient from the list to view their history.</p>
+                            <p className="text-muted-foreground">Please select a patient from the list to view their consultation history.</p>
                         </div>
                     )}
                 </div>
@@ -148,6 +147,7 @@ export default function HistoryPage() {
         )
     }
 
+    // Default Fallback for any other unhandled roles
     return (
         <Card className="max-w-md mx-auto">
             <CardContent className="p-6 flex flex-col items-center text-center">

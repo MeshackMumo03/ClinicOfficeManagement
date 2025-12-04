@@ -93,7 +93,6 @@ export default function HistoryPage() {
 
     const isLoading = isUserLoading || isUserDataLoading || (canViewAllPatients && patientsLoading);
 
-    // This is the function that will be passed to PatientList to update the state
     const handleSelectPatient = (id: string) => {
         setSelectedPatientId(id);
     };
@@ -102,15 +101,14 @@ export default function HistoryPage() {
         return <Loader />;
     }
     
-    if (userRole === 'patient') {
+    if (userRole === 'patient' && user) {
         return (
             <div className="flex flex-col gap-8">
                  <div>
                     <h1 className="font-headline text-3xl md:text-4xl">My History</h1>
                     <p className="text-muted-foreground">Review your past consultations.</p>
                 </div>
-                {/* For a patient, their user ID is their patient ID, which is safe to pass directly */}
-                <HistoryDisplay patientId={user!.uid} />
+                <HistoryDisplay patientId={user.uid} />
             </div>
         )
     }
@@ -148,7 +146,6 @@ export default function HistoryPage() {
         )
     }
 
-    // Default Fallback for any other unhandled roles
     return (
         <Card className="max-w-md mx-auto">
             <CardContent className="p-6 flex flex-col items-center text-center">

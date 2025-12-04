@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, doc } from "firebase/firestore";
 import { Loader } from "@/components/layout/loader";
@@ -40,7 +40,7 @@ function HistoryDisplay({ patientId }: { patientId: string }) {
     }
 
     if (error) {
-        return <p className="text-destructive">Error loading consultation history: {error.message}</p>;
+        return <p className="text-destructive p-4">Error loading consultation history: {error.message}</p>;
     }
 
     return (
@@ -92,14 +92,6 @@ export default function HistoryPage() {
     const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
     const isLoading = isUserLoading || isUserDataLoading || (canViewAllPatients && patientsLoading);
-
-    // This effect is no longer needed as we want the user to explicitly select.
-    // useEffect(() => {
-    //     // Automatically select the first patient if the list is available, but only for staff.
-    //     if (patients && patients.length > 0 && canViewAllPatients && !selectedPatientId) {
-    //         setSelectedPatientId(patients[0].id);
-    //     }
-    // }, [patients, canViewAllPatients, selectedPatientId]);
 
     if (isLoading) {
         return <Loader />;

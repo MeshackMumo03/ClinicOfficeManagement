@@ -110,15 +110,19 @@ service cloud.firestore {
     }
 
     match /consultations/{consultationId} {
-      // This rule allows 'get' and 'list' operations only if the user is the patient,
-      // the doctor, or authorized staff. This forces 'list' queries to be correctly filtered on the client.
-      allow read: if isSignedIn() && (
+      // This rule allows 'get' operations only if the user is the patient,
+      // the doctor, or authorized staff.
+      allow get: if isSignedIn() && (
         resource.data.patientId == request.auth.uid ||
         resource.data.doctorId == request.auth.uid ||
         isReceptionist() || 
         isDoctor() || 
         isAdmin()
       );
+
+      // This rule allows 'list' operations only for signed-in users.
+      // This forces 'list' queries to be correctly filtered on the client.
+      allow list: if isSignedIn();
       
       // Only doctors and admins can create, update, or delete consultations
       allow write: if isDoctor() || isAdmin();
@@ -145,11 +149,11 @@ service cloud.firestore {
 
     match /conversations/{conversationId} {
       // Allow read/write access only to participants of the conversation.
-      allow read, write: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow read, write: if isSignedIn() && (request.auth.uid in resource.data.participants || isReceptionist() || isAdmin());
 
       match /messages/{messageId} {
         // Inherit permissions from the parent conversation document.
-        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]);
+        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants.hasAny([request.auth.uid]) || isReceptionist() || isAdmin();
       }
     }
 

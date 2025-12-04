@@ -93,6 +93,11 @@ export default function HistoryPage() {
 
     const isLoading = isUserLoading || isUserDataLoading || (canViewAllPatients && patientsLoading);
 
+    // This is the function that will be passed to PatientList to update the state
+    const handleSelectPatient = (id: string) => {
+        setSelectedPatientId(id);
+    };
+
     if (isLoading) {
         return <Loader />;
     }
@@ -119,7 +124,7 @@ export default function HistoryPage() {
                 </div>
                 <div className="grid md:grid-cols-[350px_1fr] gap-8 items-start">
                     {patients && patients.length > 0 ? (
-                        <PatientList patients={patients} selectedPatientId={selectedPatientId} onSelectPatient={setSelectedPatientId} />
+                        <PatientList patients={patients} selectedPatientId={selectedPatientId} onSelectPatient={handleSelectPatient} />
                     ) : (
                         <Card>
                             <CardContent className="p-6 text-center">

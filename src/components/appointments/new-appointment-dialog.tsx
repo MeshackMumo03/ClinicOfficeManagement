@@ -70,9 +70,8 @@ export function NewAppointmentDialog({ children }: { children: React.ReactNode }
   const { data: userData } = useDoc(userDocRef);
   const userRole = userData?.role;
 
-  // CRITICAL FIX: Only fetch the full patient list if the user is an admin or receptionist.
-  // Doctors do not have permission to list all patients, so this prevents the permission error.
-  const canFetchPatients = userRole === 'admin' || userRole === 'receptionist';
+  // A doctor can also view the patient list, so they should be able to select a patient.
+  const canFetchPatients = userRole === 'admin' || userRole === 'receptionist' || userRole === 'doctor';
   const patientsQuery = useMemoFirebase(
     () => (firestore && canFetchPatients ? collection(firestore, "patients") : null),
     [firestore, canFetchPatients]

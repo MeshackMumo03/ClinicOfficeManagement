@@ -119,8 +119,8 @@ service cloud.firestore {
         isAdmin()
       );
 
-      // Allow listing (querying) only for staff, who are expected to filter by patient.
-      // This prevents patients from listing all consultations.
+      // Allow LIST operations only for authorized staff.
+      // The client query MUST use a 'where' filter on patientId or doctorId.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       
       // Only doctors and admins can create, update, or delete consultations
@@ -142,8 +142,8 @@ service cloud.firestore {
         // Let any authenticated user attempt to list their billings.
         // Client query is responsible for filtering to the current user.
         allow list: if isSignedIn();
-        // Allow doctors, receptionists and admins to manage billing.
-        allow create, update, delete: if isDoctor() || isReceptionist() || isAdmin();
+        // Allow receptionists and admins to manage billing. Doctors cannot.
+        allow create, update, delete: if isReceptionist() || isAdmin();
     }
 
     match /conversations/{conversationId} {

@@ -93,12 +93,13 @@ export default function HistoryPage() {
 
     const isLoading = isUserLoading || isUserDataLoading || (canViewAllPatients && patientsLoading);
 
-    useEffect(() => {
-        // Automatically select the first patient if the list is available, but only for staff.
-        if (patients && patients.length > 0 && canViewAllPatients && !selectedPatientId) {
-            setSelectedPatientId(patients[0].id);
-        }
-    }, [patients, canViewAllPatients, selectedPatientId]);
+    // This effect is no longer needed as we want the user to explicitly select.
+    // useEffect(() => {
+    //     // Automatically select the first patient if the list is available, but only for staff.
+    //     if (patients && patients.length > 0 && canViewAllPatients && !selectedPatientId) {
+    //         setSelectedPatientId(patients[0].id);
+    //     }
+    // }, [patients, canViewAllPatients, selectedPatientId]);
 
     if (isLoading) {
         return <Loader />;

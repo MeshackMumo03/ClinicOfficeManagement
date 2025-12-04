@@ -373,7 +373,7 @@ export function ConsultationForm() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {patients?.map((p) => (
+                        {patients?.map((p: any) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.firstName} {p.lastName}
                           </SelectItem>
@@ -617,3 +617,5 @@ export function ConsultationForm() {
     </Card>
   );
 }
+
+    

@@ -29,9 +29,8 @@ import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "../layout/loader";
 import { useEffect, useState, useRef } from "react";
-import { getDiagnosisSuggestion } from "@/lib/actions";
 import { audioTranscription } from "@/ai/flows/audio-transcription-flow";
-import { Sparkles, Mic, StopCircle, Loader2, Plus, Trash2, Upload, File as FileIcon } from "lucide-react";
+import { Mic, StopCircle, Loader2, Plus, Trash2, Upload, File as FileIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { DocumentUploadDialog } from "../patients/document-upload-dialog";
 import { AiTaggingTool } from "../patients/ai-tagging-tool";
@@ -69,7 +68,6 @@ export function ConsultationForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -136,39 +134,6 @@ export function ConsultationForm() {
       form.setValue("patientId", selectedPatient.id);
     }
   }, [selectedPatient, form]);
-
-  const handleGetAiSuggestion = async () => {
-    const formData = form.getValues();
-    if (!selectedPatient) {
-        toast({
-            variant: "destructive",
-            title: "Patient Not Selected",
-            description: "Please select a patient before getting an AI suggestion.",
-        });
-        return;
-    }
-    setIsAiLoading(true);
-    const result = await getDiagnosisSuggestion({
-        patientMedicalHistory: selectedPatient.medicalHistory || 'No history provided.',
-        symptoms: formData.symptoms || 'Not specified.',
-        examFindings: formData.examFindings || 'Not specified.',
-        labResults: formData.labResults || 'Not specified.',
-    });
-    setIsAiLoading(false);
-    if (result.success && result.data) {
-        form.setValue('diagnosis', result.data.diagnosisConsiderations);
-        toast({
-            title: "AI Suggestion Received",
-            description: "The diagnosis has been populated with AI-powered considerations.",
-        });
-    } else {
-        toast({
-            variant: "destructive",
-            title: "AI Suggestion Failed",
-            description: result.error || "An unknown error occurred.",
-        });
-    }
-  }
 
   const startRecording = async () => {
     try {
@@ -427,10 +392,6 @@ export function ConsultationForm() {
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-medium">Diagnosis</h3>
-                            <Button type="button" variant="outline" size="sm" onClick={handleGetAiSuggestion} disabled={isAiLoading || !selectedPatientId}>
-                                {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                                Get AI Suggestion
-                            </Button>
                         </div>
                       <FormField
                         control={form.control}

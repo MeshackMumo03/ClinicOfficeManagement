@@ -56,11 +56,14 @@ function UserConsultationHistory({ userId, userRole }: { userId: string, userRol
 
     const consultationsQuery = useMemoFirebase(() => {
         if (!firestore || !userId) return null;
-        // Create a query based on the user's role
-        const q = userRole === 'patient'
-            ? query(collection(firestore, 'consultations'), where('patientId', '==', userId), orderBy('consultationDateTime', 'desc'))
-            : query(collection(firestore, 'consultations'), where('doctorId', '==', userId), orderBy('consultationDateTime', 'desc'));
-        return q;
+        
+        const fieldPath = userRole === 'patient' ? 'patientId' : 'doctorId';
+
+        return query(
+            collection(firestore, 'consultations'), 
+            where(fieldPath, '==', userId), 
+            orderBy('consultationDateTime', 'desc')
+        );
     }, [firestore, userId, userRole]);
 
     const { data: consultations, isLoading, error } = useCollection(consultationsQuery);

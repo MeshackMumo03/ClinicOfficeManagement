@@ -18,8 +18,8 @@ function HistoryDisplay({ patientId }: { patientId: string }) {
     );
     const { data: doctors, isLoading: doctorsLoading } = useCollection(doctorsQuery);
 
-    // DEFINITIVE FIX: This query is now safe because this component will not render
-    // unless `patientId` is a valid, selected ID. The security rules will allow this query.
+    // This query is now safe because this component will only render
+    // if `patientId` is a valid, selected ID.
     const consultationsQuery = useMemoFirebase(() => {
         if (!firestore || !patientId) return null;
         return query(
@@ -134,7 +134,7 @@ export default function HistoryPage() {
                             <p className="text-muted-foreground">No patients found.</p>
                         </div>
                     )}
-                    {/* CRITICAL FIX: Only render HistoryDisplay if a patient ID is actually selected */}
+                    {/* Only render HistoryDisplay if a patient ID is actually selected */}
                     {selectedPatientId ? (
                         <HistoryDisplay patientId={selectedPatientId} />
                     ) : (

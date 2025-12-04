@@ -88,7 +88,6 @@ export default function DashboardPage() {
   const { data: patients, isLoading: patientsLoading } = useCollection(patientsQuery);
 
   // BILLINGS: Fetch billings, carefully respecting role permissions.
-  // This is the source of the error and the critical fix is here.
   const billingsQuery = useMemoFirebase(() => {
     // Do not run the query until we have all necessary information.
     if (!firestore || !user || !userRole) return null;

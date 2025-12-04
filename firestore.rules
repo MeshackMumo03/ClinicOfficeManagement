@@ -119,7 +119,7 @@ service cloud.firestore {
         isAdmin()
       );
 
-      // Allow LIST operations only for authorized staff.
+      // Allow LIST operations only for authorized staff roles.
       // The client query MUST use a 'where' filter on patientId or doctorId.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
       

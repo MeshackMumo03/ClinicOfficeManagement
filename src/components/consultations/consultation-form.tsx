@@ -260,17 +260,6 @@ export function ConsultationForm() {
   
       await addDocumentNonBlocking(consultationCollection, consultationData);
   
-      // Automatically create a billing record for this consultation
-      const billingData = {
-          patientId: data.patientId,
-          consultationId: newConsultationRef.id,
-          billingDate: new Date().toISOString(),
-          amount: Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000, // Random amount between 1000-5000
-          paymentStatus: 'unpaid',
-      };
-      await addDocumentNonBlocking(collection(firestore, 'billings'), billingData);
-    
-
       if (data.treatments && data.treatments.length > 0) {
           const prescriptionPromises = data.treatments
               .filter(treatment => treatment.drugName) 
@@ -617,5 +606,3 @@ export function ConsultationForm() {
     </Card>
   );
 }
-
-    

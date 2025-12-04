@@ -94,10 +94,11 @@ export default function HistoryPage() {
     const isLoading = isUserLoading || isUserDataLoading || (canViewAllPatients && patientsLoading);
 
     useEffect(() => {
-        if (!selectedPatientId && patients && patients.length > 0 && canViewAllPatients) {
+        // Automatically select the first patient if the list is available, but only for staff.
+        if (patients && patients.length > 0 && canViewAllPatients && !selectedPatientId) {
             setSelectedPatientId(patients[0].id);
         }
-    }, [patients, selectedPatientId, canViewAllPatients]);
+    }, [patients, canViewAllPatients, selectedPatientId]);
 
     if (isLoading) {
         return <Loader />;
@@ -127,18 +128,22 @@ export default function HistoryPage() {
                     {patients && patients.length > 0 ? (
                         <PatientList patients={patients} selectedPatientId={selectedPatientId} onSelectPatient={setSelectedPatientId} />
                     ) : (
-                        <div className="border rounded-lg bg-card text-card-foreground p-6 text-center">
-                            <p className="text-muted-foreground">No patients found.</p>
-                        </div>
+                        <Card>
+                            <CardContent className="p-6 text-center">
+                                <p className="text-muted-foreground">No patients found.</p>
+                            </CardContent>
+                        </Card>
                     )}
                     
                     {selectedPatientId ? (
                         <HistoryDisplay patientId={selectedPatientId} />
                     ) : (
-                         <div className="border rounded-lg bg-card text-card-foreground p-6 text-center h-full flex flex-col justify-center items-center">
-                            <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
-                            <p className="text-muted-foreground">Please select a patient from the list to view their consultation history.</p>
-                        </div>
+                         <Card>
+                            <CardContent className="p-6 text-center h-full flex flex-col justify-center items-center">
+                                <h2 className="text-2xl font-bold mb-2">No Patient Selected</h2>
+                                <p className="text-muted-foreground">Please select a patient from the list to view their consultation history.</p>
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
             </div>

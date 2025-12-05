@@ -1,4 +1,3 @@
-
 // This file exports the Firebase configuration object for the web app.
 // These values are used to initialize the Firebase app.
 export const firebaseConfig = {

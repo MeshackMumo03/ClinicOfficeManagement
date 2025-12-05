@@ -9,10 +9,6 @@ import { cn } from "@/lib/utils";
 import { EditProfileDialog } from "./edit-profile-dialog";
 import { ShieldCheck, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
-import { Loader } from "../layout/loader";
 import { Button } from "../ui/button";
 
 // Define the shape of the user object
@@ -55,51 +51,6 @@ const roleColors = {
     receptionist: 'bg-role-receptionist',
     patient: 'bg-role-patient',
 }
-
-function UserConsultationHistory({ userId, userRole }: { userId: string, userRole: User['role'] }) {
-    const firestore = useFirestore();
-
-    const consultationsQuery = useMemoFirebase(() => {
-        if (!firestore || !userId) return null;
-        
-        const fieldPath = userRole === 'patient' ? 'patientId' : 'doctorId';
-
-        return query(
-            collection(firestore, 'consultations'), 
-            where(fieldPath, '==', userId), 
-            orderBy('consultationDateTime', 'desc')
-        );
-    }, [firestore, userId, userRole]);
-
-    const { data: consultations, isLoading, error } = useCollection(consultationsQuery);
-
-    if (isLoading) return <div className="flex justify-center p-8"><Loader /></div>;
-    if (error) return <p className="text-destructive p-4">Error loading consultations: {error.message}</p>;
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>My Consultations</CardTitle>
-          <CardDescription>A list of your recent consultations.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {consultations && consultations.length > 0 ? (
-            <div className="space-y-4">
-              {consultations.map((c: any) => (
-                <div key={c.id} className="border p-4 rounded-lg">
-                  <p className="font-semibold">{new Date(c.consultationDateTime).toLocaleDateString()}</p>
-                  <p className="text-sm">Diagnosis: {c.diagnosis || 'N/A'}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center">No consultations found.</p>
-          )}
-        </CardContent>
-      </Card>
-    );
-}
-
 
 /**
  * A component to display the profile of a user, adapting to their role.
@@ -159,40 +110,27 @@ export function UserProfile({ user }: UserProfileProps) {
       </div>
 
       {/* Profile Details */}
-        <Tabs defaultValue="info">
-            <TabsList>
-                <TabsTrigger value="info">Information</TabsTrigger>
-                {(role === 'patient' || role === 'doctor') && <TabsTrigger value="history">Consultation History</TabsTrigger>}
-            </TabsList>
-            <TabsContent value="info">
-                <div className="space-y-6">
-                    <InfoCard title="Personal Information" items={personalInfo} />
-                    
-                    {role === 'admin' && (
-                        <Card>
-                        <CardHeader className="flex flex-row items-center gap-4">
-                            <ShieldCheck className="h-8 w-8 text-role-admin" />
-                            <CardTitle className="text-xl">Admin Privileges</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">
-                            As an administrator, you have full access to all system features, including user management, billing, and reports.
-                            </p>
-                        </CardContent>
-                        </Card>
-                    )}
-
-                    {role !== 'admin' && roleSpecificInfo.some(item => item.value) && (
-                        <InfoCard title="Professional Information" items={roleSpecificInfo} />
-                    )}
-                </div>
-            </TabsContent>
-            {(role === 'patient' || role === 'doctor') && (
-                <TabsContent value="history">
-                    <UserConsultationHistory userId={uid} userRole={role} />
-                </TabsContent>
+        <div className="space-y-6">
+            <InfoCard title="Personal Information" items={personalInfo} />
+            
+            {role === 'admin' && (
+                <Card>
+                <CardHeader className="flex flex-row items-center gap-4">
+                    <ShieldCheck className="h-8 w-8 text-role-admin" />
+                    <CardTitle className="text-xl">Admin Privileges</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">
+                    As an administrator, you have full access to all system features, including user management, billing, and reports.
+                    </p>
+                </CardContent>
+                </Card>
             )}
-        </Tabs>
+
+            {role !== 'admin' && roleSpecificInfo.some(item => item.value) && (
+                <InfoCard title="Professional Information" items={roleSpecificInfo} />
+            )}
+        </div>
     </div>
   );
 }

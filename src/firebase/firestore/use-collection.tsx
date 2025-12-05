@@ -72,6 +72,16 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
+    // Extract path for debugging
+    const path: string =
+      memoizedTargetRefOrQuery.type === 'collection'
+        ? (memoizedTargetRefOrQuery as CollectionReference).path
+        : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+
+    // DEBUG: Log what we're trying to query
+    console.log('🔍 useCollection - Attempting to query:', path);
+    console.log('🔍 Query type:', memoizedTargetRefOrQuery.type);
+
     // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
@@ -80,16 +90,16 @@ export function useCollection<T = any>(
         for (const doc of snapshot.docs) {
           results.push({ ...(doc.data() as T), id: doc.id });
         }
+        console.log('✅ useCollection - Query succeeded:', path, `(${results.length} docs)`);
         setData(results);
         setError(null);
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        // This logic extracts the path from either a ref or a query
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        console.error('❌ useCollection - Query failed:', path);
+        console.error('❌ Error code:', error.code);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Full error:', error);
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',

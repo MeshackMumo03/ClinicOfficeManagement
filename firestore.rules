@@ -122,11 +122,10 @@ service cloud.firestore {
         isDoctor() || 
         isAdmin()
       );
-
-      // TEMPORARY FIX: Allow any signed-in user to list consultations
-      // TODO: Client should filter by patientId or doctorId
-      allow list: if isSignedIn();
       
+      // Allow listing consultations only if querying for a specific patient or doctor.
+      allow list: if (isDoctor() || isReceptionist() || isAdmin()) && ('patientId' in request.query.where || 'doctorId' in request.query.where);
+
       // Only doctors and admins can create, update, or delete consultations
       allow write: if isDoctor() || isAdmin();
     }

@@ -1,34 +1,4 @@
-
 {
-  "indexes": [
-    {
-      "collectionGroup": "consultations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "patientId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "consultationDateTime",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "consultations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "doctorId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "consultationDateTime",
-          "order": "DESCENDING"
-        }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

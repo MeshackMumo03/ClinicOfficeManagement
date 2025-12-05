@@ -1,0 +1,8 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "us-central1",
+    "rules": "/home/user/studio/firestore.rules",
+    "indexes": "/home/user/studio/firestore.indexes.json"
+  }
+}

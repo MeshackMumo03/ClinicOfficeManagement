@@ -73,7 +73,7 @@ service cloud.firestore {
     }
 
     match /patients/{patientId} {
-      // A patient can get their own record. Doctors, Receptionists, and Admins can get any patient record.
+      // A patient can get their own record. Staff can get any patient record.
       allow get: if (isPatient() && isOwner(patientId)) || isDoctor() || isReceptionist() || isAdmin();
       // Allow staff to list all patients.
       allow list: if isDoctor() || isReceptionist() || isAdmin();
@@ -124,11 +124,11 @@ service cloud.firestore {
         isAdmin()
       );
 
-      // Staff can list consultations. The client MUST filter by patient or doctor.
-      // Patients can list their own consultations.
+      // Allow staff (doctors, receptionists, admins) to list consultations.
+      // Allow patients to list ONLY their own consultations.
       allow list: if isDoctor() || isReceptionist() || isAdmin() || (isPatient() && request.query.where.patientId == request.auth.uid);
       
-      // Only doctors and admins can create, update, or delete consultations
+      // Only doctors and admins can create, update, or delete consultations.
       allow write: if isDoctor() || isAdmin();
     }
 

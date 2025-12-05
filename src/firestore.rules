@@ -19,9 +19,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // Check if user document exists first
+    function userExists() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function isUser(role) {
       // Check that the user is signed in AND that their user document exists and has the specified role.
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+      return userExists() && getUserData().role == role;
     }
     
     function isAdmin() {
@@ -119,9 +124,9 @@ service cloud.firestore {
         isAdmin()
       );
 
-      // Allow LIST operations only for authorized staff roles.
-      // The client query MUST use a 'where' filter on patientId or doctorId.
-      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      // Staff can list consultations. The client MUST filter by patient or doctor.
+      // Patients can list their own consultations.
+      allow list: if isDoctor() || isReceptionist() || isAdmin() || (isPatient() && request.query.where.patientId == request.auth.uid);
       
       // Only doctors and admins can create, update, or delete consultations
       allow write: if isDoctor() || isAdmin();
@@ -142,7 +147,7 @@ service cloud.firestore {
         // Let any authenticated user attempt to list their billings.
         // Client query is responsible for filtering to the current user.
         allow list: if isSignedIn();
-        // Allow receptionists and admins to manage billing.
+        // Allow receptionists and admins to manage billing. Doctors cannot.
         allow create, update, delete: if isReceptionist() || isAdmin();
     }
 

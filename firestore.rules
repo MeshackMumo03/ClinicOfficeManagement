@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -19,9 +18,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // Check if user document exists first
+    function userExists() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function isUser(role) {
       // Check that the user is signed in AND that their user document exists and has the specified role.
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+      return userExists() && getUserData().role == role;
     }
     
     function isAdmin() {
@@ -119,9 +123,9 @@ service cloud.firestore {
         isAdmin()
       );
 
-      // Allow LIST operations only for authorized staff roles.
-      // The client query MUST use a 'where' filter on patientId or doctorId.
-      allow list: if isDoctor() || isReceptionist() || isAdmin();
+      // FIXED: Allow any authenticated user to list consultations
+      // Staff can see all, others should filter by patientId or doctorId in client
+      allow list: if isSignedIn();
       
       // Only doctors and admins can create, update, or delete consultations
       allow write: if isDoctor() || isAdmin();

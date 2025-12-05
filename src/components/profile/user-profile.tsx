@@ -7,12 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { InfoCard } from "./info-card";
 import { cn } from "@/lib/utils";
 import { EditProfileDialog } from "./edit-profile-dialog";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy } from "firebase/firestore";
 import { Loader } from "../layout/loader";
+import { Button } from "../ui/button";
 
 // Define the shape of the user object
 type User = {
@@ -24,6 +25,10 @@ type User = {
   workId?: string;
   photoURL?: string;
   verified?: boolean;
+  dateOfBirth?: string;
+  gender?: string;
+  contactNumber?: string;
+  address?: string;
 };
 
 interface UserProfileProps {
@@ -101,12 +106,16 @@ function UserConsultationHistory({ userId, userRole }: { userId: string, userRol
  * @param {UserProfileProps} props The properties for the component.
  */
 export function UserProfile({ user }: UserProfileProps) {
-  const { uid, name, email, role, photoURL, registrationNumber, workId, verified } = user;
+  const { uid, name, email, role, photoURL, registrationNumber, workId, verified, dateOfBirth, gender, contactNumber, address } = user;
   const avatarFallback = getInitials(name);
 
   const personalInfo = [
     { label: "Full Name", value: name },
     { label: "Email Address", value: email },
+    { label: "Date of Birth", value: dateOfBirth },
+    { label: "Gender", value: gender },
+    { label: "Contact Number", value: contactNumber },
+    { label: "Address", value: address },
   ];
 
   const roleSpecificInfo = [
@@ -141,7 +150,12 @@ export function UserProfile({ user }: UserProfileProps) {
           </div>
           <p className="text-muted-foreground">{email}</p>
         </div>
-        <EditProfileDialog user={user} />
+        <EditProfileDialog user={user}>
+            <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Profile
+            </Button>
+        </EditProfileDialog>
       </div>
 
       {/* Profile Details */}

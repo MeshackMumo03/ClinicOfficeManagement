@@ -8,6 +8,7 @@ import { FirebaseClientProvider } from '@/firebase';
 export const metadata: Metadata = {
   title: 'ClinicOffice Manager',
   description: 'A secure, cloud-based Doctor Office Management System',
+  manifest: '/manifest.json',
 };
 
 /**
@@ -30,6 +31,7 @@ export default function RootLayout({
         {/* Import custom fonts from Google Fonts. */}
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
+        <meta name="theme-color" content="#2563eb" />
       </head>
       <body className="font-body antialiased">
         {/* Wrap the application with the FirebaseClientProvider to make Firebase services available. */}
